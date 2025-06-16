@@ -1,0 +1,30 @@
+{
+  "name": "attendance-system",
+  "version": "1.0.0",
+  "description": "웹 기반 출석 관리 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "attendance",
+    "management",
+    "web",
+    "glitch"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/attendance-system.git"
+  }
+}

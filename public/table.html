@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석 현황 조회</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        input, select, button {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-link {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            text-decoration: none;
+            display: inline-block;
+            color: white;
+            margin-left: 15px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 20px;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .attendance-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 11px;
+            min-width: 60px;
+        }
+        
+        .attendance-table td {
+            padding: 10px 6px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+            min-width: 60px;
+        }
+        
+        .attendance-cell {
+            font-weight: 600;
+            border-radius: 4px;
+            margin: 2px;
+            padding: 8px;
+            min-width: 40px;
+            min-height: 40px;
+            text-align: center;
+            vertical-align: middle;
+            /* 클릭 불가 */
+            cursor: default;
+            user-select: none;
+        }
+        
+        .present {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+        
+        .absent {
+            background: white;
+            color: #333;
+            border: 2px solid #dee2e6;
+        }
+        
+        .pass {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .fail {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .info-box h3 {
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .info-box li {
+            padding: 5px 0;
+            color: #1565c0;
+        }
+        
+        .info-box li:before {
+            content: "▶ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .section {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .controls > * {
+                width: 100%;
+                text-align: center;
+            }
+            
+            input, select, button {
+                padding: 12px;
+                font-size: 16px;
+            }
+            
+            .attendance-table {
+                font-size: 11px;
+                margin-top: 10px;
+            }
+            
+            .attendance-table th {
+                padding: 8px 4px;
+                font-size: 10px;
+                min-width: 50px;
+            }
+            
+            .attendance-table td {
+                padding: 8px 4px;
+                font-size: 12px;
+                min-width: 50px;
+            }
+            
+            .attendance-cell {
+                min-width: 35px;
+                min-height: 35px;
+                padding: 6px;
+                font-size: 12px;
+                margin: 1px;
+            }
+        }
+        
+        /* 아주 작은 화면 */
+        @media (max-width: 320px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .section {
+                padding: 10px;
+            }
+            
+            .attendance-table th,
+            .attendance-table td {
+                padding: 6px 2px;
+                font-size: 10px;
+                min-width: 40px;
+            }
+            
+            .attendance-cell {
+                min-width: 30px;
+                min-height: 30px;
+                padding: 4px;
+                font-size: 11px;
+            }
+        }
+        
+        /* 가로 스크롤 스타일링 */
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 출석 현황 조회</h1>
+            <p>읽기 전용 출석 현황 테이블</p>
+        </div>
+        
+        <div class="content">
+            <!-- 조회 옵션 -->
+            <div class="section">
+                <h2>📅 조회 설정</h2>
+                <div class="controls">
+                    <label>년도:</label>
+                    <input type="number" id="year" value="2024" min="2020" max="2030">
+                    <label>월:</label>
+                    <select id="month">
+                        <option value="1">1월</option>
+                        <option value="2">2월</option>
+                        <option value="3">3월</option>
+                        <option value="4">4월</option>
+                        <option value="5">5월</option>
+                        <option value="6" selected>6월</option>
+                        <option value="7">7월</option>
+                        <option value="8">8월</option>
+                        <option value="9">9월</option>
+                        <option value="10">10월</option>
+                        <option value="11">11월</option>
+                        <option value="12">12월</option>
+                    </select>
+                    <button onclick="loadTable()">🔍 조회</button>
+<!--                     <a href="/index.html" class="btn-link">✏️ 관리 페이지</a> -->
+                </div>
+            </div>
+            
+            <!-- 출석 현황 테이블 -->
+            <div class="section">
+                <h2>📋 출석 현황</h2>
+                <div id="attendanceTable">
+                    <div class="loading">출석 데이터를 불러오는 중입니다...</div>
+                </div>
+                
+                <!-- 정보 박스 -->
+                <div class="info-box">
+                    <h3>📋 출석 조건</h3>
+                    <ul>
+                        <li><strong>운영진:</strong> 출석 조건 없음</li>
+                        <li><strong>페이서:</strong> 월 3회 이상 출석</li>
+                        <li><strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>
+                        <li><strong>포토:</strong> 월 1회 이상 출석</li>
+                    </ul>
+                    <br>
+                    <p><strong>💡 범례:</strong></p>
+                    <p>• 초록색 배경: 출석 조건 충족 ✅</p>
+                    <p>• 빨간색 배경: 출석 조건 미충족 ❌</p>
+                    <p>• 초록색 셀: 출석(1), 흰색 셀: 불참(0)</p>
+                    <p>• 📱 모바일에서는 표를 좌우로 스크롤하여 확인</p>
+                </div>
+                
+                <div id="lastUpdated" class="last-updated"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        var currentYear = 2024;
+        var currentMonth = 6;
+        
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            var currentDate = new Date();
+            currentYear = currentDate.getFullYear();
+            currentMonth = currentDate.getMonth() + 1;
+            
+            document.getElementById('year').value = currentYear;
+            document.getElementById('month').value = currentMonth;
+            
+            // 년도/월 변경 시 자동 조회
+            document.getElementById('year').addEventListener('change', loadTable);
+            document.getElementById('month').addEventListener('change', loadTable);
+            
+            // 초기 데이터 로드
+            loadTable();
+        });
+        
+        // 테이블 로드
+        function loadTable() {
+            currentYear = parseInt(document.getElementById('year').value);
+            currentMonth = parseInt(document.getElementById('month').value);
+            
+            var container = document.getElementById('attendanceTable');
+            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
+            
+            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                displayTable(data, currentYear, currentMonth);
+                updateLastUpdatedTime();
+            })
+            .catch(function(error) {
+                container.innerHTML = '<div class="error">❌ 데이터를 불러오는 중 오류가 발생했습니다:<br>' + error + '</div>';
+            });
+        }
+        
+        // 테이블 표시
+        function displayTable(responseData, year, month) {
+            var container = document.getElementById('attendanceTable');
+            var data = responseData.members || responseData;
+            var dates = responseData.dates || [];
+            
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<div class="error">📭 해당 월에 등록된 멤버가 없습니다.<br>관리 페이지에서 멤버를 추가해주세요.</div>';
+                return;
+            }
+            
+            // 멤버를 order 순으로 정렬
+            var memberEntries = Object.keys(data);
+            memberEntries.sort(function(a, b) {
+                var orderA = data[a].order || 0;
+                var orderB = data[b].order || 0;
+                return orderA - orderB;
+            });
+            
+            // 날짜가 없으면 첫 번째 멤버의 출석 데이터에서 추출
+            var finalDates = dates;
+            if (finalDates.length === 0 && memberEntries.length > 0) {
+                finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
+            }
+            
+            var html = '';
+            
+            // 모바일에서 가로 스크롤 안내
+            var isMobile = window.innerWidth <= 768;
+            if (isMobile && finalDates.length > 4) {
+                html += '<div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 10px; padding: 8px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">📱 표를 좌우로 스크롤하여 모든 날짜를 확인하세요</div>';
+            }
+            
+            // 테이블 생성
+            html += '<div class="table-container">';
+            html += '<table class="attendance-table">';
+            
+            // 헤더
+            html += '<thead><tr>';
+            html += '<th style="min-width: 60px;">직책</th>';
+            html += '<th style="min-width: 80px;">성명</th>';
+            html += '<th style="min-width: 50px;">합계</th>';
+            
+            for (var i = 0; i < finalDates.length; i++) {
+                var date = finalDates[i];
+                var dateObj = new Date(date);
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                var day = dateObj.getDate();
+                html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
+            }
+            html += '</tr></thead>';
+            
+            // 바디
+            html += '<tbody>';
+            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
+                var name = memberEntries[memberIndex];
+                var info = data[name];
+                
+                if (!info || !info.stats) continue;
+                
+                var stats = info.stats;
+                var rowClass = stats.meets_requirement ? 'pass' : 'fail';
+                
+                html += '<tr class="' + rowClass + '">';
+                html += '<td><strong>' + (info.role || '미정') + '</strong></td>';
+                html += '<td><strong>' + name + '</strong></td>';
+                html += '<td><strong>' + (stats.total || 0) + '</strong></td>';
+                
+                for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
+                    var date = finalDates[dateIndex];
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    var cellClass = status === 1 ? 'present' : 'absent';
+                    var displayText = status === 1 ? '1' : '0';
+                    
+                    // 읽기 전용 - 클릭 이벤트 없음
+                    html += '<td class="attendance-cell ' + cellClass + '" title="' + name + ' - ' + date + '">';
+                    html += displayText;
+                    html += '</td>';
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // 마지막 업데이트 시간 표시
+        function updateLastUpdatedTime() {
+            var now = new Date();
+            var timeString = now.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            document.getElementById('lastUpdated').innerHTML = '🕒 마지막 업데이트: ' + timeString;
+        }
+        
+        // 자동 새로고침 (선택사항 - 30초마다)
+        // setInterval(function() {
+        //     loadTable();
+        // }, 30000);
+    </script>
+</body>
+</html>

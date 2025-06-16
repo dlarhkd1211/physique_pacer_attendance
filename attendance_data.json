@@ -1,0 +1,142 @@
+{
+  "최은규": {
+    "role": "운영진",
+    "attendance": {
+      "2024-06-03": 0,
+      "2024-06-05": 0
+    }
+  },
+  "문찬호": {
+    "role": "페이서",
+    "attendance": {
+      "2024-06-05": 1,
+      "2024-06-13": 1,
+      "2024-06-20": 1
+    }
+  },
+  "2025-06": {
+    "김영훈": {
+      "role": "운영진",
+      "attendance": {
+        "2025-06-02": 0,
+        "2025-06-04": 0
+      },
+      "order": 0
+    },
+    "김자영": {
+      "role": "운영진",
+      "attendance": {},
+      "order": 1
+    },
+    "최은규": {
+      "role": "운영진",
+      "attendance": {
+        "2025-06-04": 1,
+        "2025-06-11": 1
+      },
+      "order": 2
+    },
+    "서대용": {
+      "role": "운영진",
+      "attendance": {
+        "2025-06-16": 0
+      },
+      "order": 3
+    },
+    "장병주": {
+      "role": "포토",
+      "attendance": {
+        "2025-06-04": 0
+      },
+      "order": 4
+    },
+    "전승호": {
+      "role": "포토",
+      "attendance": {
+        "2025-06-02": 0
+      },
+      "order": 5
+    },
+    "기승현": {
+      "role": "포토",
+      "attendance": {},
+      "order": 6
+    },
+    "김명섭": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 8
+    },
+    "남희윤": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 9
+    },
+    "박재동": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 10
+    },
+    "박성민": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 11
+    },
+    "신나라": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 12
+    },
+    "한일규": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 13
+    },
+    "이지나": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 14
+    },
+    "최예지": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 15
+    },
+    "문찬호": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 16
+    },
+    "정주은": {
+      "role": "페이서",
+      "attendance": {},
+      "order": 17
+    },
+    "서영화": {
+      "role": "페이서 강남",
+      "attendance": {},
+      "order": 18
+    },
+    "정재영": {
+      "role": "페이서 강남",
+      "attendance": {},
+      "order": 19
+    },
+    "임형욱": {
+      "role": "페이서 강남",
+      "attendance": {},
+      "order": 20
+    },
+    "정원준": {
+      "role": "페이서 강남",
+      "attendance": {},
+      "order": 21
+    },
+    "백동윤": {
+      "role": "포토",
+      "attendance": {},
+      "order": 7
+    }
+  },
+  "2025-07": {}
+}
