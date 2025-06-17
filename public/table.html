@@ -132,7 +132,7 @@
         .fixed-columns th {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 8px;
+            padding: 24px 8px;
             text-align: center;
             font-weight: 600;
             font-size: 11px;
@@ -588,7 +588,7 @@
                 var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
                 var weekday = weekdays[dateObj.getDay()];
                 var day = dateObj.getDate();
-                html += '<th>' + day + '<br>' + weekday + '</th>';
+                html += '<th>' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
             }
             
             // 기타 칼럼들 (맨 오른쪽)
