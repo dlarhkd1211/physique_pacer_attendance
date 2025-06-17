@@ -196,6 +196,7 @@ class GitHubAttendanceSystem {
       this.data[monthKey][name] = {
         role: role,
         attendance: {},
+        extraAttendance: {},
         order: Object.keys(this.data[monthKey]).length
       };
       await this.saveData(`멤버 추가: ${name} (${role})`);
@@ -261,6 +262,7 @@ class GitHubAttendanceSystem {
         this.data[currentMonthKey][name] = {
           role: memberData.role,
           attendance: {},
+          extraAttendance: {},
           order: memberData.order
         };
       }
@@ -274,8 +276,18 @@ class GitHubAttendanceSystem {
   async updateAttendance(year, month, name, date, status) {
     const monthKey = this.getMonthKey(year, month);
     if (this.data[monthKey] && this.data[monthKey][name]) {
-      this.data[monthKey][name].attendance[date] = parseInt(status);
-      await this.saveData(`${name} 출석 업데이트 (${date})`);
+      // 기타 참여인지 확인 (extra1, extra2, extra3)
+      if (date.startsWith('extra')) {
+        if (!this.data[monthKey][name].extraAttendance) {
+          this.data[monthKey][name].extraAttendance = {};
+        }
+        this.data[monthKey][name].extraAttendance[date] = parseInt(status);
+        await this.saveData(`${name} 기타 참여 업데이트 (${date})`);
+      } else {
+        // 정규 날짜 출석
+        this.data[monthKey][name].attendance[date] = parseInt(status);
+        await this.saveData(`${name} 출석 업데이트 (${date})`);
+      }
       return true;
     }
     return false;
@@ -306,18 +318,21 @@ class GitHubAttendanceSystem {
     const members = this.data[monthKey] || {};
     
     if (!members[name]) {
-      return { total: 0, wednesday: 0, meets_requirement: false };
+      return { total: 0, wednesday: 0, extra: 0, meets_requirement: false };
     }
 
     const member = members[name];
     const role = member.role;
     const attendance = member.attendance;
+    const extraAttendance = member.extraAttendance || {};
     
     const monthDates = this.getMonthDates(year, month);
     
     let totalAttendance = 0;
     let wednesdayAttendance = 0;
+    let extraCount = 0;
     
+    // 정규 날짜 출석 계산
     for (let i = 0; i < monthDates.length; i++) {
       const dateStr = monthDates[i];
       if (attendance[dateStr] === 1) {
@@ -327,6 +342,14 @@ class GitHubAttendanceSystem {
         if (dateObj.getDay() === 3) {
           wednesdayAttendance++;
         }
+      }
+    }
+    
+    // 기타 참여 계산
+    for (let i = 1; i <= 3; i++) {
+      if (extraAttendance['extra' + i] === 1) {
+        extraCount++;
+        totalAttendance++; // 전체 출석에도 포함
       }
     }
     
@@ -345,6 +368,7 @@ class GitHubAttendanceSystem {
     return {
       total: totalAttendance,
       wednesday: wednesdayAttendance,
+      extra: extraCount,
       meets_requirement: meetsRequirement,
       required_total: requirements.total,
       required_wednesday: requirements.wednesday
@@ -368,6 +392,7 @@ class GitHubAttendanceSystem {
           this.data[monthKey][name] = {
             role: memberData.role || '미정',
             attendance: memberData.attendance || {},
+            extraAttendance: memberData.extraAttendance || {},
             order: memberData.order !== undefined ? memberData.order : i
           };
         }
@@ -411,7 +436,8 @@ class GitHubAttendanceSystem {
         role: memberInfo.role,
         order: memberInfo.order || 0,
         stats: stats,
-        attendance: {}
+        attendance: {},
+        extraAttendance: memberInfo.extraAttendance || {}
       };
       
       for (let j = 0; j < dates.length; j++) {
