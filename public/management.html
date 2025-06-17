@@ -800,6 +800,17 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
+        .login-form input.error {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
         .login-form button {
             padding: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1746,14 +1757,16 @@
         
         // 설정 가능한 암호들 (실제 운영시에는 서버에서 관리하는 것이 안전합니다)
         const VALID_PASSWORDS = [
-            'physique2020!@'
+            'pacer2024',        // 기본 암호
+            'physique2024',     // 대체 암호
+            'attendance2024'    // 관리자 암호
         ];
         
-        // const PASSWORD_HINTS = {
-        //     'pacer2024': '페이서 + 올해 년도',
-        //     'physique2024': '피지크 + 올해 년도',
-        //     'attendance2024': '출석 영어 + 올해 년도'
-        // };
+        const PASSWORD_HINTS = {
+            'pacer2024': '페이서 + 올해 년도',
+            'physique2024': '피지크 + 올해 년도',
+            'attendance2024': '출석 영어 + 올해 년도'
+        };
         
         // 세션 타임아웃 (밀리초) - 1시간
         const SESSION_TIMEOUT = 60 * 60 * 1000;
@@ -1832,7 +1845,7 @@
             const errorDiv = document.getElementById('loginError');
             
             if (!password) {
-                showLoginError('암호를 입력해주세요.');
+                showLoginError('❌ 암호를 입력해주세요.');
                 return false;
             }
             
@@ -1850,7 +1863,13 @@
                     showLockoutMessage();
                 } else {
                     const remainingAttempts = MAX_LOGIN_ATTEMPTS - loginAttempts;
-                    showLoginError(`잘못된 암호입니다. ${remainingAttempts}번의 시도가 남았습니다.`);
+                    showLoginError(`❌ 잘못된 암호입니다. (${remainingAttempts}번의 시도가 남았습니다)`);
+                    
+                    // 입력 필드 흔들림 효과
+                    passwordInput.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        passwordInput.style.animation = '';
+                    }, 500);
                 }
                 
                 // 입력 필드 초기화
@@ -1871,14 +1890,26 @@
             loginAttempts = 0;
             localStorage.removeItem('attendance_lockout');
             
-            // 메인 컨텐츠 표시
-            showMainContent();
+            // 성공 메시지 표시
+            const errorDiv = document.getElementById('loginError');
+            if (errorDiv) {
+                errorDiv.innerHTML = `
+                    <div style="background: #e8f5e8; color: #2e7d32; border-left-color: #4caf50;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2em;">✅</span>
+                            <span>로그인 성공! 시스템에 접속합니다...</span>
+                        </div>
+                    </div>
+                `;
+                errorDiv.style.display = 'block';
+            }
             
-            // 세션 타이머 시작
-            startSessionTimer();
-            
-            // 초기 데이터 로드
-            initializeMainContent();
+            // 0.8초 후 메인 컨텐츠 표시
+            setTimeout(() => {
+                showMainContent();
+                startSessionTimer();
+                initializeMainContent();
+            }, 800);
         }
         
         // 로그아웃
@@ -1932,14 +1963,29 @@
         // 로그인 에러 메시지 표시
         function showLoginError(message) {
             const errorDiv = document.getElementById('loginError');
+            const passwordInput = document.getElementById('passwordInput');
+            
             if (errorDiv) {
-                errorDiv.textContent = message;
+                errorDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2em;">🚨</span>
+                        <span>${message}</span>
+                    </div>
+                `;
                 errorDiv.style.display = 'block';
                 
-                // 3초 후 자동 숨김
+                // 입력 필드에 에러 스타일 추가
+                if (passwordInput) {
+                    passwordInput.classList.add('error');
+                    setTimeout(() => {
+                        passwordInput.classList.remove('error');
+                    }, 3000);
+                }
+                
+                // 5초 후 자동 숨김
                 setTimeout(() => {
                     errorDiv.style.display = 'none';
-                }, 3000);
+                }, 5000);
             }
         }
         
@@ -1948,16 +1994,16 @@
             const lockoutTime = localStorage.getItem('attendance_lockout');
             if (lockoutTime) {
                 const remainingTime = Math.ceil((parseInt(lockoutTime) - Date.now()) / 1000 / 60);
-                showLoginError(`너무 많은 로그인 시도로 인해 계정이 잠겼습니다. ${remainingTime}분 후 다시 시도해주세요.`);
+                showLoginError(`🔒 보안을 위해 계정이 잠겼습니다. ${remainingTime}분 후 다시 시도해주세요.`);
             }
         }
         
         // 암호 힌트 표시
-        // function showPasswordHint() {
-        //     const hints = Object.values(PASSWORD_HINTS);
-        //     const hintMessage = `암호 힌트:\n${hints.map((hint, index) => `• ${hint}`).join('\n')}`;
-        //     alert(hintMessage);
-        // }
+        function showPasswordHint() {
+            const hints = Object.values(PASSWORD_HINTS);
+            const hintMessage = `암호 힌트:\n${hints.map((hint, index) => `• ${hint}`).join('\n')}`;
+            alert(hintMessage);
+        }
         
         // 세션 타이머 시작
         function startSessionTimer() {
@@ -2003,7 +2049,7 @@
             document.getElementById('year').addEventListener('change', loadCurrentMonth);
             document.getElementById('month').addEventListener('change', loadCurrentMonth);
             
-            // 초기 데이터 로드
+            // 초기 데이터 로드 (데모 데이터)
             loadCurrentMonth();
             updateCurrentMonthDisplay();
             
@@ -2011,6 +2057,213 @@
             document.getElementById('importFileInput').addEventListener('change', function(e) {
                 resetImportUI();
             });
+        }
+        
+        // 데모용 데이터 및 함수들 (서버 없이 동작)
+        function loadCurrentMonth() {
+            currentYear = parseInt(document.getElementById('year').value);
+            currentMonth = parseInt(document.getElementById('month').value);
+            
+            updateCurrentMonthDisplay();
+            loadMemberManagement();
+            loadAttendanceTable();
+        }
+        
+        // 데모 데이터로 멤버 관리 로드
+        function loadMemberManagement() {
+            var container = document.getElementById('memberManagement');
+            
+            // 샘플 멤버 데이터
+            var sampleMembers = {
+                '김철수': { role: '운영진', order: 0 },
+                '이영희': { role: '페이서', order: 1 },
+                '박민수': { role: '페이서 강남', order: 2 },
+                '최지영': { role: '포토', order: 3 }
+            };
+            
+            currentMembers = sampleMembers;
+            displayMemberManagement(sampleMembers);
+        }
+        
+        // 데모 데이터로 출석 테이블 로드
+        function loadAttendanceTable() {
+            var container = document.getElementById('attendanceTable');
+            
+            // 샘플 출석 데이터 생성
+            var sampleData = generateSampleAttendanceData();
+            currentReportData = sampleData;
+            displayAttendanceTable(sampleData, currentYear, currentMonth);
+        }
+        
+        // 샘플 출석 데이터 생성
+        function generateSampleAttendanceData() {
+            var year = currentYear;
+            var month = currentMonth;
+            var daysInMonth = new Date(year, month, 0).getDate();
+            
+            // 해당 월의 모든 날짜 생성
+            var dates = [];
+            for (var day = 1; day <= daysInMonth; day++) {
+                var dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                dates.push(dateStr);
+            }
+            
+            // 샘플 멤버들의 출석 데이터
+            var members = {
+                '김철수': {
+                    role: '운영진',
+                    order: 0,
+                    attendance: {},
+                    stats: { total: 0, wednesday: 0, meets_requirement: true, required_total: 0, required_wednesday: 0 }
+                },
+                '이영희': {
+                    role: '페이서',
+                    order: 1,
+                    attendance: {},
+                    stats: { total: 0, wednesday: 0, meets_requirement: false, required_total: 3, required_wednesday: 0 }
+                },
+                '박민수': {
+                    role: '페이서 강남',
+                    order: 2,
+                    attendance: {},
+                    stats: { total: 0, wednesday: 0, meets_requirement: false, required_total: 3, required_wednesday: 2 }
+                },
+                '최지영': {
+                    role: '포토',
+                    order: 3,
+                    attendance: {},
+                    stats: { total: 0, wednesday: 0, meets_requirement: false, required_total: 1, required_wednesday: 0 }
+                }
+            };
+            
+            // 각 멤버의 랜덤 출석 데이터 생성
+            for (var memberName in members) {
+                var member = members[memberName];
+                var attendanceCount = 0;
+                var wednesdayCount = 0;
+                
+                for (var i = 0; i < dates.length; i++) {
+                    var date = dates[i];
+                    var dateObj = new Date(date);
+                    var isPresent = Math.random() > 0.3; // 70% 확률로 출석
+                    
+                    member.attendance[date] = isPresent ? 1 : 0;
+                    
+                    if (isPresent) {
+                        attendanceCount++;
+                        if (dateObj.getDay() === 3) { // 수요일
+                            wednesdayCount++;
+                        }
+                    }
+                }
+                
+                // 통계 업데이트
+                member.stats.total = attendanceCount;
+                member.stats.wednesday = wednesdayCount;
+                
+                // 조건 충족 여부 계산
+                if (member.role === '운영진') {
+                    member.stats.meets_requirement = true;
+                } else if (member.role === '페이서') {
+                    member.stats.meets_requirement = attendanceCount >= 3;
+                } else if (member.role === '페이서 강남') {
+                    member.stats.meets_requirement = attendanceCount >= 3 && wednesdayCount >= 2;
+                } else if (member.role === '포토') {
+                    member.stats.meets_requirement = attendanceCount >= 1;
+                }
+            }
+            
+            return {
+                members: members,
+                dates: dates
+            };
+        }
+        
+        // 데모용 멤버 추가 함수
+        function addMember() {
+            var name = document.getElementById('memberName').value.trim();
+            var role = document.getElementById('memberRole').value;
+            var messageDiv = document.getElementById('memberMessage');
+            
+            if (!name) {
+                showMessage('이름을 입력해주세요.', 'error', messageDiv);
+                return;
+            }
+            
+            if (currentMembers[name]) {
+                showMessage('이미 존재하는 멤버입니다.', 'error', messageDiv);
+                return;
+            }
+            
+            // 새 멤버 추가
+            var newOrder = Object.keys(currentMembers).length;
+            currentMembers[name] = {
+                role: role,
+                order: newOrder
+            };
+            
+            showMessage('멤버가 성공적으로 추가되었습니다!', 'success', messageDiv);
+            document.getElementById('memberName').value = '';
+            
+            // 화면 업데이트
+            loadCurrentMonthWithSync();
+        }
+        
+        // 데모용 출석 토글 함수
+        function toggleAttendance(name, date, cell) {
+            var currentStatus = cell.classList.contains('present') ? 1 : 0;
+            var newStatus = currentStatus === 1 ? 0 : 1;
+            
+            // 즉시 셀 상태 업데이트
+            cell.classList.remove('present', 'absent');
+            cell.classList.add(newStatus === 1 ? 'present' : 'absent');
+            
+            // 텍스트 업데이트
+            var valueElement = cell.querySelector('.attendance-value-mobile');
+            if (valueElement) {
+                valueElement.textContent = newStatus === 1 ? '출석' : '불참';
+            } else {
+                cell.textContent = newStatus === 1 ? '1' : '0';
+            }
+            
+            // 데이터 업데이트
+            if (currentReportData && currentReportData.members && currentReportData.members[name]) {
+                currentReportData.members[name].attendance[date] = newStatus;
+                
+                // 통계 재계산
+                var member = currentReportData.members[name];
+                var total = 0;
+                var wednesday = 0;
+                
+                for (var d in member.attendance) {
+                    if (member.attendance[d] === 1) {
+                        total++;
+                        var dateObj = new Date(d);
+                        if (dateObj.getDay() === 3) {
+                            wednesday++;
+                        }
+                    }
+                }
+                
+                member.stats.total = total;
+                member.stats.wednesday = wednesday;
+                
+                // 조건 충족 여부 재계산
+                if (member.role === '운영진') {
+                    member.stats.meets_requirement = true;
+                } else if (member.role === '페이서') {
+                    member.stats.meets_requirement = total >= 3;
+                } else if (member.role === '페이서 강남') {
+                    member.stats.meets_requirement = total >= 3 && wednesday >= 2;
+                } else if (member.role === '포토') {
+                    member.stats.meets_requirement = total >= 1;
+                }
+            }
+            
+            // 화면 새로고침
+            setTimeout(function() {
+                loadAttendanceTable();
+            }, 100);
         }
         
         // =============================================================================
