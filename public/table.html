@@ -345,6 +345,7 @@
             .scrollable-columns td {
                 padding: 8px 4px;
                 font-size: 12px;
+                height: 45px; /* 모바일 행 높이 */
             }
             
             .attendance-cell {
@@ -372,6 +373,7 @@
             .scrollable-columns td {
                 padding: 6px 2px;
                 font-size: 10px;
+                height: 40px; /* 작은 화면 행 높이 */
             }
             
             .attendance-cell {
@@ -660,9 +662,9 @@
         }
         
         // 자동 새로고침 (선택사항 - 30초마다)
-        setInterval(function() {
-            loadTable();
-        }, 30000);
+        // setInterval(function() {
+        //     loadTable();
+        // }, 30000);
     </script>
 </body>
 </html>
