@@ -318,7 +318,15 @@ class GitHubAttendanceSystem {
     const members = this.data[monthKey] || {};
     
     if (!members[name]) {
-      return { total: 0, wednesday: 0, extra: 0, meets_requirement: false };
+      return { 
+        total: 0, 
+        wednesday: 0, 
+        extra: 0,
+        extra1: 0,
+        extra2: 0,
+        extra3: 0,
+        meets_requirement: false 
+      };
     }
 
     const member = members[name];
@@ -331,6 +339,7 @@ class GitHubAttendanceSystem {
     let totalAttendance = 0;
     let wednesdayAttendance = 0;
     let extraCount = 0;
+    let extra1 = 0, extra2 = 0, extra3 = 0;
     
     // 정규 날짜 출석 계산
     for (let i = 0; i < monthDates.length; i++) {
@@ -350,6 +359,9 @@ class GitHubAttendanceSystem {
       if (extraAttendance['extra' + i] === 1) {
         extraCount++;
         totalAttendance++; // 전체 출석에도 포함
+        if (i === 1) extra1 = 1;
+        if (i === 2) extra2 = 1;
+        if (i === 3) extra3 = 1;
       }
     }
     
@@ -369,6 +381,9 @@ class GitHubAttendanceSystem {
       total: totalAttendance,
       wednesday: wednesdayAttendance,
       extra: extraCount,
+      extra1: extra1,
+      extra2: extra2,
+      extra3: extra3,
       meets_requirement: meetsRequirement,
       required_total: requirements.total,
       required_wednesday: requirements.wednesday
