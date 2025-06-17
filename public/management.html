@@ -1,4 +1,1503 @@
-<!DOCTYPE html>
+// 멤버 삭제
+        function deleteMember(name) {
+            if (!confirm("'" + name + "' 멤버를 정말 삭제하시겠습니까?")) {
+                return;
+            }
+
+            // 현재 선택된 멤버 저장
+            var currentSelectedMemberName = null;
+            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                currentSelectedMemberName = memberList[selectedMemberIndex];
+            }
+
+            fetch('/api/member/' + currentYear + '/' + currentMonth + '/' + encodeURIComponent(name), {
+                method: 'DELETE'
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    // 삭제된 멤버가 현재 선택된 멤버인 경우 첫 번째 멤버로 변경
+                    if (currentSelectedMemberName === name) {
+                        selectedMemberIndex = 0;
+                        loadCurrentMonthWithSync();
+                    } else {
+                        // 다른 멤버가 선택된 경우 선택 유지
+                        loadCurrentMonthWithSync(currentSelectedMemberName);
+                    }
+                } else {
+                    alert('멤버 삭제에 실패했습니다.');
+                }
+            })
+            .catch(function(error) {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+
+        // 역할 변경 완료 후 업데이트
+        function updateMemberRole() {
+            if (!editingMember) return;
+
+            // 현재 선택된 멤버 저장
+            var currentSelectedMemberName = null;
+            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                currentSelectedMemberName = memberList[selectedMemberIndex];
+            }
+
+            var newRole = document.getElementById('newRole').value;
+
+            fetch('/api/member_role', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    name: editingMember,
+                    role: newRole
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    closeRoleModal();
+                    // 역할 변경 후 선택 유지하면서 업데이트
+                    loadCurrentMonthWithSync(currentSelectedMemberName);
+                } else {
+                    alert('역할 변경에 실패했습니다.');
+                }
+            })
+            .catch(function(error) {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+
+        // 멤버 관리와 출석 현황을 동기화하여 로드
+        function loadCurrentMonthWithSync(selectedMemberName) {
+            // 멤버 관리 먼저 로드
+            loadMemberManagement();
+
+            // 출석 현황을 선택된 멤버와 함께 로드
+            if (selectedMemberName) {
+                loadAttendanceTableWithMemberSelection(selectedMemberName);
+            } else {
+                loadAttendanceTable();
+            }
+        }
+
+        // 역할 변경 모달
+        function openRoleModal(name, currentRole) {
+            editingMember = name;
+            document.getElementById('roleModalMemberName').textContent = name + '의 역할 변경';
+            document.getElementById('newRole').value = currentRole;
+            document.getElementById('roleModal').style.display = 'block';
+        }
+
+        function closeRoleModal() {
+            document.getElementById('roleModal').style.display = 'none';
+            editingMember = null;
+        }
+
+        // 멤버 관리 로드
+        function loadMemberManagement() {
+            var container = document.getElementById('memberManagement');
+            container.innerHTML = '<div class="loading">멤버 목록을 불러오는 중입니다...</div>';
+
+            fetch('/api/members/' + currentYear + '/' + currentMonth)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                currentMembers = data;
+                displayMemberManagement(data);
+            })
+            .catch(function(error) {
+                container.innerHTML = '<div class="error">멤버 목록을 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
+            });
+        }
+
+        // 멤버 관리 화면 표시
+        function displayMemberManagement(members) {
+            var container = document.getElementById('memberManagement');
+
+            if (Object.keys(members).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
+                return;
+            }
+
+            // 멤버를 order 순으로 정렬
+            var memberEntries = Object.keys(members);
+            memberEntries.sort(function(a, b) {
+                var orderA = members[a].order || 0;
+                var orderB = members[b].order || 0;
+                return orderA - orderB;
+            });
+
+            var html = '<div class="member-management" id="sortable-members">';
+
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var member = members[name];
+
+                html += '<div class="member-card" data-member-name="' + name + '">';
+                html += '<div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>';
+                html += '<div class="member-info">';
+                html += '<div class="member-name">' + name + '</div>';
+                html += '<div class="member-role">' + member.role + '</div>';
+                html += '</div>';
+                html += '<div class="member-actions">';
+                html += '<button class="btn-warning" onclick="openRoleModal(\'' + name + '\', \'' + member.role + '\')">역할 변경</button>';
+                html += '<button class="btn-danger" onclick="deleteMember(\'' + name + '\')">삭제</button>';
+                html += '</div>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Sortable 초기화
+            setTimeout(function() {
+                initializeSortable();
+            }, 100);
+        }
+
+        // Sortable 초기화
+        function initializeSortable() {
+            var memberContainer = document.querySelector('#sortable-members');
+
+            if (!memberContainer) return;
+            if (typeof Sortable === 'undefined') return;
+
+            if (memberContainer.sortableInstance) {
+                memberContainer.sortableInstance.destroy();
+            }
+
+            memberContainer.sortableInstance = Sortable.create(memberContainer, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                handle: '.drag-handle',
+                onEnd: function(evt) {
+                    if (evt.oldIndex !== evt.newIndex) {
+                        updateMemberOrderByDrag(evt.oldIndex, evt.newIndex);
+                    }
+                }
+            });
+        }
+
+        // 드래그로 순서 변경
+        function updateMemberOrderByDrag(oldIndex, newIndex) {
+            var memberNames = Object.keys(currentMembers);
+            memberNames.sort(function(a, b) {
+                var orderA = currentMembers[a].order || 0;
+                var orderB = currentMembers[b].order || 0;
+                return orderA - orderB;
+            });
+
+            // 현재 선택된 멤버 이름 저장 (카드뷰용)
+            var currentSelectedMemberName = null;
+            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                currentSelectedMemberName = memberList[selectedMemberIndex];
+            }
+
+            // 배열에서 요소 이동
+            var movedMember = memberNames.splice(oldIndex, 1)[0];
+            memberNames.splice(newIndex, 0, movedMember);
+
+            // 새로운 order 값들 생성
+            var orders = [];
+            for (var i = 0; i < memberNames.length; i++) {
+                orders.push({
+                    name: memberNames[i],
+                    order: i
+                });
+            }
+
+            // 서버에 업데이트 요청
+            fetch('/api/member_orders', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    orders: orders
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    // 멤버 관리와 출석 현황 모두 업데이트
+                    loadMemberManagement();
+
+                    // 출석 현황도 업데이트하되, 카드뷰에서 선택된 멤버 유지
+                    loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
+                } else {
+                    alert('순서 변경에 실패했습니다.');
+                    loadCurrentMonth();
+                }
+            })
+            .catch(function(error) {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+                loadCurrentMonth();
+            });
+        }
+
+        // 선택된 멤버를 유지하면서 출석 테이블 로드
+        function loadAttendanceTableWithMemberSelection(selectedMemberName) {
+            var container = document.getElementById('attendanceTable');
+            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
+
+            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                // Export용 데이터 저장
+                currentReportData = data;
+
+                // 새로운 순서로 멤버 리스트 업데이트
+                var memberEntries = Object.keys(data.members || data);
+                memberEntries.sort(function(a, b) {
+                    var dataObj = data.members || data;
+                    var orderA = dataObj[a].order || 0;
+                    var orderB = dataObj[b].order || 0;
+                    return orderA - orderB;
+                });
+
+                // 이전에 선택된 멤버의 새로운 인덱스 찾기
+                if (selectedMemberName && memberEntries.indexOf(selectedMemberName) !== -1) {
+                    selectedMemberIndex = memberEntries.indexOf(selectedMemberName);
+                } else {
+                    // 이전 선택이 없거나 해당 멤버가 없으면 첫 번째 멤버 선택
+                    selectedMemberIndex = 0;
+                }
+
+                displayAttendanceTable(data, currentYear, currentMonth);
+            })
+            .catch(function(error) {
+                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
+            });
+        }
+
+        // 출석 테이블 로드
+        function loadAttendanceTable() {
+            var container = document.getElementById('attendanceTable');
+            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
+
+            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                // Export용 데이터 저장
+                currentReportData = data;
+                displayAttendanceTable(data, currentYear, currentMonth);
+            })
+            .catch(function(error) {
+                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
+            });
+        }
+
+        // 출석 테이블 표시
+        function displayAttendanceTable(responseData, year, month) {
+            var container = document.getElementById('attendanceTable');
+            var data = responseData.members || responseData;
+            var dates = responseData.dates || [];
+
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
+                return;
+            }
+
+            // 멤버를 order 순으로 정렬
+            var memberEntries = Object.keys(data);
+            memberEntries.sort(function(a, b) {
+                var orderA = data[a].order || 0;
+                var orderB = data[b].order || 0;
+                return orderA - orderB;
+            });
+
+            // 날짜가 없으면 첫 번째 멤버의 출석 데이터에서 추출
+            var finalDates = dates;
+            if (finalDates.length === 0 && memberEntries.length > 0) {
+                finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
+            }
+
+            var html = '';
+
+            // 현재 사용할 뷰 결정
+            var viewToUse = getCurrentView();
+
+            // 뷰 토글 버튼 (PC와 모바일 모두 표시)
+            html += '<div class="view-toggle">';
+
+            if (viewToUse === 'table') {
+                html += '<button id="tableViewBtn" class="active" onclick="switchToTableView()">📊 테이블 뷰</button>';
+                html += '<button id="cardViewBtn" onclick="switchToCardView()">📋 카드 뷰</button>';
+            } else {
+                html += '<button id="tableViewBtn" onclick="switchToTableView()">📊 테이블 뷰</button>';
+                html += '<button id="cardViewBtn" class="active" onclick="switchToCardView()">📋 카드 뷰</button>';
+            }
+
+            html += '</div>';
+
+            // 데스크톱 테이블 뷰
+            html += '<div class="desktop-view"' + (viewToUse === 'table' ? '' : ' style="display: none;"') + '>';
+            html += generateTableView(data, memberEntries, finalDates, year, month);
+            html += '</div>';
+
+            // 모바일 카드 뷰
+            html += '<div class="mobile-view"' + (viewToUse === 'card' ? '' : ' style="display: none;"') + '>';
+            html += generateCardView(data, memberEntries, finalDates, year, month);
+            html += '</div>';
+
+            // 범례 추가
+            html += '<div style="margin-top: 30px; padding: 25px; background: #f8f9fa; border-radius: 10px;">';
+            html += '<h3>📋 출석 조건 및 사용법</h3>';
+            html += '<ul style="list-style: none; margin: 15px 0;">';
+            html += '<li style="padding: 5px 0;">▶ <strong>운영진:</strong> 출석 조건 없음</li>';
+            html += '<li style="padding: 5px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>';
+            html += '<li style="padding: 5px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>';
+            html += '<li style="padding: 5px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>';
+            html += '</ul>';
+            html += '<div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0;">';
+            html += '<p style="margin: 5px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>';
+            html += '<p style="margin: 5px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>';
+            html += '<p style="margin: 5px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>';
+            html += '<p style="margin: 5px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>';
+            if (isMobile()) {
+                html += '<p style="margin: 5px 0; color: #1565c0;">• 📱 모바일: 기본 카드 뷰, 멤버별 개별 확인</p>';
+            } else {
+                html += '<p style="margin: 5px 0; color: #1565c0;">• 🖥️ PC: 기본 테이블 뷰, 전체 한눈에 확인</p>';
+            }
+            html += '</div>';
+            html += '</div>';
+
+            container.innerHTML = html;
+
+            // 현재 뷰 상태 설정
+            currentView = viewToUse;
+        }
+
+        // 테이블 뷰 생성
+        function generateTableView(data, memberEntries, finalDates, year, month) {
+            var isMobile = window.innerWidth <= 768;
+            var html = '';
+
+            if (isMobile && finalDates.length > 4) {
+                html += '<div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">📱 표를 좌우로 스크롤하여 모든 날짜를 확인하세요</div>';
+            }
+
+            html += '<div class="table-container">';
+            html += '<table class="attendance-table">';
+
+            // 헤더
+            html += '<thead><tr>';
+            html += '<th style="min-width: 60px;">직책</th>';
+            html += '<th style="min-width: 80px;">성명</th>';
+            html += '<th style="min-width: 50px;">합계</th>';
+
+            for (var i = 0; i < finalDates.length; i++) {
+                var date = finalDates[i];
+                var dateObj = new Date(date);
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                var day = dateObj.getDate();
+                html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
+            }
+            html += '</tr></thead>';
+
+            // 바디
+            html += '<tbody>';
+            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
+                var name = memberEntries[memberIndex];
+                var info = data[name];
+
+                if (!info || !info.stats) continue;
+
+                var stats = info.stats;
+                var rowClass = stats.meets_requirement ? 'pass' : 'fail';
+
+                html += '<tr class="' + rowClass + '">';
+                html += '<td><strong>' + (info.role || '미정') + '</strong></td>';
+                html += '<td><strong>' + name + '</strong></td>';
+                html += '<td><strong>' + (stats.total || 0) + '</strong></td>';
+
+                for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
+                    var date = finalDates[dateIndex];
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    var cellClass = status === 1 ? 'present' : 'absent';
+                    var displayText = status === 1 ? '1' : '0';
+
+                    html += '<td class="attendance-cell ' + cellClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
+                    html += displayText;
+                    html += '</td>';
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+
+            return html;
+        }
+
+        // 카드 뷰 생성 - 선택된 멤버만 표시
+        function generateCardView(data, memberEntries, finalDates, year, month) {
+            memberList = memberEntries; // 전역 변수에 저장
+
+            var html = '';
+
+            // 멤버 선택 드롭다운
+            html += '<div class="member-selector">';
+            html += '<label>👤 멤버 선택:</label>';
+            html += '<select id="memberSelect" onchange="changeMember()">';
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var selected = i === selectedMemberIndex ? ' selected' : '';
+                html += '<option value="' + i + '"' + selected + '>' + name + '</option>';
+            }
+            html += '</select>';
+            html += '</div>';
+
+            // 네비게이션 버튼
+            html += '<div class="card-navigation">';
+            html += '<button class="nav-button" onclick="previousMember()" ' + (selectedMemberIndex <= 0 ? 'disabled' : '') + '>← 이전</button>';
+            html += '<div class="member-indicator">' + (selectedMemberIndex + 1) + ' / ' + memberEntries.length + '</div>';
+            html += '<button class="nav-button" onclick="nextMember()" ' + (selectedMemberIndex >= memberEntries.length - 1 ? 'disabled' : '') + '>다음 →</button>';
+            html += '</div>';
+
+            // 선택된 멤버 카드 표시
+            html += '<div class="single-card-container">';
+
+            if (memberEntries.length === 0) {
+                html += '<div class="no-member-selected">';
+                html += '<h3>등록된 멤버가 없습니다</h3>';
+                html += '<p>멤버를 추가해주세요.</p>';
+                html += '</div>';
+            } else if (selectedMemberIndex >= 0 && selectedMemberIndex < memberEntries.length) {
+                var name = memberEntries[selectedMemberIndex];
+                var info = data[name];
+
+                if (info && info.stats) {
+                    var stats = info.stats;
+                    var cardClass = stats.meets_requirement ? 'pass' : 'fail';
+
+                    html += '<div class="member-card-view ' + cardClass + '" style="width: 100%; max-width: 600px;">';
+
+                    // 멤버 헤더
+                    html += '<div class="member-header-mobile">';
+                    html += '<div class="member-name-mobile">' + name + '</div>';
+                    html += '<div class="member-role-mobile">' + (info.role || '미정') + '</div>';
+                    html += '</div>';
+
+                    // 통계
+                    html += '<div class="member-stats-mobile">';
+                    html += '<div class="stat-item">';
+                    html += '<div class="stat-label">총 출석</div>';
+                    html += '<div class="stat-value">' + (stats.total || 0) + '회</div>';
+                    html += '</div>';
+                    html += '<div class="stat-item">';
+                    html += '<div class="stat-label">수요일 출석</div>';
+                    html += '<div class="stat-value">' + (stats.wednesday || 0) + '회</div>';
+                    html += '</div>';
+                    html += '<div class="stat-item">';
+                    html += '<div class="stat-label">조건 충족</div>';
+                    html += '<div class="stat-value">' + (stats.meets_requirement ? '✅' : '❌') + '</div>';
+                    html += '</div>';
+                    html += '</div>';
+
+                    // 출석 그리드
+                    html += '<div class="attendance-grid-mobile">';
+                    for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
+                        var date = finalDates[dateIndex];
+                        var dateObj = new Date(date);
+                        var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                        var weekday = weekdays[dateObj.getDay()];
+                        var day = dateObj.getDate();
+
+                        var attendance = info.attendance || {};
+                        var status = attendance[date] || 0;
+                        var itemClass = status === 1 ? 'present' : 'absent';
+                        var displayText = status === 1 ? '출석' : '불참';
+
+                        html += '<div class="attendance-item-mobile ' + itemClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
+                        html += '<div class="date-label-mobile">' + month + '/' + day + '<br>' + weekday + '</div>';
+                        html += '<div class="attendance-value-mobile">' + displayText + '</div>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+
+                    html += '</div>';
+                }
+            }
+
+            html += '</div>';
+
+            return html;
+        }
+
+        // 멤버 네비게이션 함수들
+        function previousMember() {
+            if (selectedMemberIndex > 0) {
+                selectedMemberIndex--;
+                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
+            }
+        }
+
+        function nextMember() {
+            if (selectedMemberIndex < memberList.length - 1) {
+                selectedMemberIndex++;
+                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
+            }
+        }
+
+        function changeMember() {
+            var select = document.getElementById('memberSelect');
+            if (select) {
+                selectedMemberIndex = parseInt(select.value);
+                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
+            }
+        }
+
+        // 카드 뷰만 업데이트 (뷰 변경 없이)
+        function updateCardViewOnly() {
+            // 현재 선택된 멤버 이름 저장
+            var currentSelectedMemberName = null;
+            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                currentSelectedMemberName = memberList[selectedMemberIndex];
+            }
+
+            // 카드뷰 부분만 업데이트
+            var mobileView = document.querySelector('.mobile-view');
+            if (mobileView && currentView === 'card') {
+                // 현재 데이터로 카드뷰 내용만 다시 생성
+                fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    var memberEntries = Object.keys(data.members || data);
+                    memberEntries.sort(function(a, b) {
+                        var dataObj = data.members || data;
+                        var orderA = dataObj[a].order || 0;
+                        var orderB = dataObj[b].order || 0;
+                        return orderA - orderB;
+                    });
+
+                    var finalDates = data.dates || [];
+                    if (finalDates.length === 0 && memberEntries.length > 0) {
+                        finalDates = Object.keys((data.members || data)[memberEntries[0]].attendance || {}).sort();
+                    }
+
+                    var cardViewHTML = generateCardView(data.members || data, memberEntries, finalDates, currentYear, currentMonth);
+                    mobileView.innerHTML = cardViewHTML;
+                })
+                .catch(function(error) {
+                    console.error('카드뷰 업데이트 오류:', error);
+                });
+            }
+        }
+
+        // 뷰 전환 함수들
+        function switchToCardView() {
+            var desktopView = document.querySelector('.desktop-view');
+            var mobileView = document.querySelector('.mobile-view');
+            var cardBtn = document.getElementById('cardViewBtn');
+            var tableBtn = document.getElementById('tableViewBtn');
+
+            if (desktopView) {
+                desktopView.style.display = 'none';
+                desktopView.classList.add('inactive');
+            }
+            if (mobileView) {
+                mobileView.style.display = 'block';
+                mobileView.classList.add('active');
+            }
+            if (cardBtn) cardBtn.classList.add('active');
+            if (tableBtn) tableBtn.classList.remove('active');
+
+            currentView = 'card';
+            userSelectedView = 'card'; // 사용자가 직접 선택했음을 기록
+
+            // 카드 뷰로 전환 시 첫 번째 멤버 선택 (인덱스가 범위를 벗어나는 경우만)
+            if (selectedMemberIndex < 0 || selectedMemberIndex >= memberList.length) {
+                selectedMemberIndex = 0;
+            }
+        }
+
+        function switchToTableView() {
+            var desktopView = document.querySelector('.desktop-view');
+            var mobileView = document.querySelector('.mobile-view');
+            var cardBtn = document.getElementById('cardViewBtn');
+            var tableBtn = document.getElementById('tableViewBtn');
+
+            if (desktopView) {
+                desktopView.style.display = 'block';
+                desktopView.classList.remove('inactive');
+            }
+            if (mobileView) {
+                mobileView.style.display = 'none';
+                mobileView.classList.remove('active');
+            }
+            if (tableBtn) tableBtn.classList.add('active');
+            if (cardBtn) cardBtn.classList.remove('active');
+
+            currentView = 'table';
+            userSelectedView = 'table'; // 사용자가 직접 선택했음을 기록
+        }
+
+        // 출석 토글
+        function toggleAttendance(name, date, cell) {
+            var currentStatus = cell.classList.contains('present') ? 1 : 0;
+            var newStatus = currentStatus === 1 ? 0 : 1;
+
+            fetch('/api/attendance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    name: name,
+                    date: date,
+                    status: newStatus
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    // 즉시 셀 상태 업데이트
+                    cell.classList.remove('present', 'absent');
+                    cell.classList.add(newStatus === 1 ? 'present' : 'absent');
+
+                    // 텍스트 업데이트
+                    var valueElement = cell.querySelector('.attendance-value-mobile');
+                    if (valueElement) {
+                        valueElement.textContent = newStatus === 1 ? '출석' : '불참';
+                    } else {
+                        cell.textContent = newStatus === 1 ? '1' : '0';
+                    }
+
+                    // 통계 업데이트를 위해 테이블 다시 로드
+                    setTimeout(function() {
+                        loadAttendanceTable();
+                    }, 100);
+                } else {
+                    alert('출석 정보 업데이트에 실패했습니다.');
+                }
+            })
+            .catch(function(error) {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+
+        // 메시지 표시
+        function showMessage(message, type, container) {
+            container.innerHTML = '<div class="' + type + '">' + message + '</div>';
+            setTimeout(function() {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            var modal = document.getElementById('roleModal');
+            if (event.target === modal) {
+                closeRoleModal();
+            }
+        };
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthenticationStatus();
+            
+            // 암호 입력 필드 설정
+            const passwordInput = document.getElementById('passwordInput');
+            if (passwordInput) {
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleLogin(e);
+                    }
+                });
+                passwordInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>        
+        // Excel 데이터 생성
+        function generateExcelData(reportData) {
+            var data = reportData.members || reportData;
+            var dates = reportData.dates || [];
+            
+            // 멤버를 order 순으로 정렬
+            var memberEntries = Object.keys(data);
+            memberEntries.sort(function(a, b) {
+                var orderA = data[a].order || 0;
+                var orderB = data[b].order || 0;
+                return orderA - orderB;
+            });
+            
+            var result = [];
+            
+            // 헤더 행
+            var header = ['직책', '성명', '합계'];
+            for (var i = 0; i < dates.length; i++) {
+                var date = new Date(dates[i]);
+                var month = date.getMonth() + 1;
+                var day = date.getDate();
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[date.getDay()];
+                header.push(month + '/' + day + '(' + weekday + ')');
+            }
+            result.push(header);
+            
+            // 데이터 행
+            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
+                var name = memberEntries[memberIndex];
+                var info = data[name];
+                
+                if (!info || !info.stats) continue;
+                
+                var row = [
+                    info.role || '미정',
+                    name,
+                    info.stats.total || 0
+                ];
+                
+                for (var dateIndex = 0; dateIndex < dates.length; dateIndex++) {
+                    var date = dates[dateIndex];
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    row.push(status === 1 ? '출석' : '불참');
+                }
+                
+                result.push(row);
+            }
+            
+            return result;
+        }
+        
+        // 요약 통계 데이터 생성
+        function generateSummaryData(reportData) {
+            var data = reportData.members || reportData;
+            var memberEntries = Object.keys(data);
+            memberEntries.sort(function(a, b) {
+                var orderA = data[a].order || 0;
+                var orderB = data[b].order || 0;
+                return orderA - orderB;
+            });
+            
+            var result = [];
+            result.push(['이름', '직책', '총 출석', '수요일 출석', '조건 충족', '달성률(%)']);
+            
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var info = data[name];
+                
+                if (!info || !info.stats) continue;
+                
+                var stats = info.stats;
+                var role = info.role || '미정';
+                
+                // 달성률 계산
+                var achievementRate = 0;
+                if (role !== '운영진' && stats.required_total > 0) {
+                    achievementRate = Math.round((stats.total / stats.required_total) * 100);
+                }
+                
+                result.push([
+                    name,
+                    role,
+                    stats.total || 0,
+                    stats.wednesday || 0,
+                    stats.meets_requirement ? '충족' : '미충족',
+                    role === '운영진' ? 'N/A' : achievementRate + '%'
+                ]);
+            }
+            
+            return result;
+        }
+        
+        // CSV 컨텐츠 생성
+        function generateCSVContent(reportData) {
+            var excelData = generateExcelData(reportData);
+            var csvContent = '';
+            
+            for (var i = 0; i < excelData.length; i++) {
+                var row = excelData[i];
+                var csvRow = row.map(function(cell) {
+                    // CSV에서 쉼표와 따옴표 처리
+                    var cellStr = String(cell);
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                        cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
+                    }
+                    return cellStr;
+                }).join(',');
+                
+                csvContent += csvRow + '\n';
+            }
+            
+            // UTF-8 BOM 추가 (한글 깨짐 방지)
+            return '\uFEFF' + csvContent;
+        }
+        
+        // 요약 보고서 생성
+        function generateSummaryReport(reportData) {
+            var data = reportData.members || reportData;
+            var dates = reportData.dates || [];
+            var memberEntries = Object.keys(data);
+            memberEntries.sort(function(a, b) {
+                var orderA = data[a].order || 0;
+                var orderB = data[b].order || 0;
+                return orderA - orderB;
+            });
+            
+            var report = '';
+            report += '='.repeat(60) + '\n';
+            report += '               출석 관리 시스템 요약 보고서\n';
+            report += '='.repeat(60) + '\n';
+            report += '보고서 생성일: ' + new Date().toLocaleString('ko-KR') + '\n';
+            report += '대상 기간: ' + currentYear + '년 ' + currentMonth + '월\n';
+            report += '총 출석일: ' + dates.length + '일\n';
+            report += '총 멤버수: ' + memberEntries.length + '명\n';
+            report += '\n';
+            
+            // 역할별 통계
+            var roleStats = {};
+            var totalPass = 0;
+            var totalFail = 0;
+            
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var info = data[name];
+                if (!info || !info.stats) continue;
+                
+                var role = info.role || '미정';
+                if (!roleStats[role]) {
+                    roleStats[role] = { total: 0, pass: 0, fail: 0 };
+                }
+                
+                roleStats[role].total++;
+                if (info.stats.meets_requirement) {
+                    roleStats[role].pass++;
+                    totalPass++;
+                } else {
+                    roleStats[role].fail++;
+                    totalFail++;
+                }
+            }
+            
+            report += '[ 역할별 통계 ]\n';
+            report += '-'.repeat(40) + '\n';
+            for (var role in roleStats) {
+                var stat = roleStats[role];
+                var passRate = stat.total > 0 ? Math.round((stat.pass / stat.total) * 100) : 0;
+                report += role + ': ' + stat.total + '명 (충족: ' + stat.pass + '명, 미충족: ' + stat.fail + '명, 충족률: ' + passRate + '%)\n';
+            }
+            report += '\n';
+            
+            report += '[ 전체 요약 ]\n';
+            report += '-'.repeat(40) + '\n';
+            var overallPassRate = (totalPass + totalFail) > 0 ? Math.round((totalPass / (totalPass + totalFail)) * 100) : 0;
+            report += '조건 충족: ' + totalPass + '명\n';
+            report += '조건 미충족: ' + totalFail + '명\n';
+            report += '전체 충족률: ' + overallPassRate + '%\n';
+            report += '\n';
+            
+            report += '[ 개별 멤버 상세 ]\n';
+            report += '-'.repeat(60) + '\n';
+            
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var info = data[name];
+                if (!info || !info.stats) continue;
+                
+                var stats = info.stats;
+                var role = info.role || '미정';
+                
+                report += (i + 1) + '. ' + name + ' (' + role + ')\n';
+                report += '   총 출석: ' + (stats.total || 0) + '회';
+                if (role === '페이서 강남') {
+                    report += ' (수요일: ' + (stats.wednesday || 0) + '회)';
+                }
+                report += '\n';
+                
+                if (role !== '운영진') {
+                    report += '   필요 출석: ' + (stats.required_total || 0) + '회';
+                    if (stats.required_wednesday > 0) {
+                        report += ' (수요일: ' + stats.required_wednesday + '회)';
+                    }
+                    report += '\n';
+                    report += '   조건 충족: ' + (stats.meets_requirement ? '✓ 충족' : '✗ 미충족') + '\n';
+                }
+                report += '\n';
+            }
+            
+            report += '[ 출석 조건 안내 ]\n';
+            report += '-'.repeat(40) + '\n';
+            report += '• 운영진: 출석 조건 없음\n';
+            report += '• 페이서: 월 3회 이상 출석\n';
+            report += '• 페이서 강남: 월 3회 이상 출석 (그 중 수요일 2회 이상)\n';
+            report += '• 포토: 월 1회 이상 출석\n';
+            report += '\n';
+            
+            report += '='.repeat(60) + '\n';
+            report += '                    보고서 끝\n';
+            report += '='.repeat(60) + '\n';
+            
+            return report;
+        }
+        
+        // 파일 다운로드 함수
+        function downloadFile(content, fileName, mimeType) {
+            var blob = new Blob([content], { type: mimeType });
+            var url = window.URL.createObjectURL(blob);
+            
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            window.URL.revokeObjectURL(url);
+        }
+
+        // =============================================================================
+        // IMPORT 기능들
+        // =============================================================================
+
+        // 파일에서 데이터 가져오기
+        function importFromFile() {
+            var fileInput = document.getElementById('importFileInput');
+            var file = fileInput.files[0];
+            var messageDiv = document.getElementById('importMessage');
+
+            if (!file) {
+                showMessage('파일을 선택해주세요.', 'error', messageDiv);
+                return;
+            }
+
+            // 지원하는 파일 형식 확인
+            var fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.json')) {
+                importFileType = 'json';
+                readJSONFile(file);
+            } else if (fileName.endsWith('.xlsx')) {
+                importFileType = 'excel';
+                readExcelFile(file);
+            } else if (fileName.endsWith('.csv')) {
+                importFileType = 'csv';
+                readCSVFile(file);
+            } else {
+                showMessage('지원하지 않는 파일 형식입니다. JSON, Excel(.xlsx), CSV 파일만 지원합니다.', 'error', messageDiv);
+                return;
+            }
+        }
+
+        // JSON 파일 읽기
+        function readJSONFile(file) {
+            var reader = new FileReader();
+            var messageDiv = document.getElementById('importMessage');
+
+            reader.onload = function(e) {
+                try {
+                    var jsonData = JSON.parse(e.target.result);
+
+                    // JSON 데이터 형식 검증
+                    if (validateJSONImportData(jsonData)) {
+                        importData = jsonData;
+                        showImportPreview();
+                        showMessage('파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
+                    } else {
+                        showMessage('올바르지 않은 JSON 데이터 형식입니다.', 'error', messageDiv);
+                    }
+                } catch (error) {
+                    showMessage('JSON 파일 읽기 오류: ' + error.message, 'error', messageDiv);
+                }
+            };
+
+            reader.onerror = function() {
+                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Excel 파일 읽기
+        function readExcelFile(file) {
+            var reader = new FileReader();
+            var messageDiv = document.getElementById('importMessage');
+
+            reader.onload = function(e) {
+                try {
+                    var data = new Uint8Array(e.target.result);
+                    var workbook = XLSX.read(data, { type: 'array' });
+
+                    // 첫 번째 시트에서 데이터 추출
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    // Excel 데이터를 JSON 형식으로 변환
+                    var convertedData = convertExcelToImportData(jsonData);
+
+                    if (convertedData) {
+                        importData = convertedData;
+                        showImportPreview();
+                        showMessage('Excel 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
+                    } else {
+                        showMessage('Excel 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
+                    }
+                } catch (error) {
+                    showMessage('Excel 파일 읽기 오류: ' + error.message, 'error', messageDiv);
+                }
+            };
+
+            reader.onerror = function() {
+                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // CSV 파일 읽기
+        function readCSVFile(file) {
+            var reader = new FileReader();
+            var messageDiv = document.getElementById('importMessage');
+
+            reader.onload = function(e) {
+                try {
+                    var csvText = e.target.result;
+                    var lines = csvText.split('\n');
+                    var csvData = [];
+
+                    for (var i = 0; i < lines.length; i++) {
+                        if (lines[i].trim()) {
+                            csvData.push(parseCSVLine(lines[i]));
+                        }
+                    }
+
+                    // CSV 데이터를 JSON 형식으로 변환
+                    var convertedData = convertExcelToImportData(csvData); // Excel과 동일한 형식
+
+                    if (convertedData) {
+                        importData = convertedData;
+                        showImportPreview();
+                        showMessage('CSV 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
+                    } else {
+                        showMessage('CSV 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
+                    }
+                } catch (error) {
+                    showMessage('CSV 파일 읽기 오류: ' + error.message, 'error', messageDiv);
+                }
+            };
+
+            reader.onerror = function() {
+                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
+            };
+
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // CSV 라인 파싱
+        function parseCSVLine(line) {
+            var result = [];
+            var current = '';
+            var inQuotes = false;
+
+            for (var i = 0; i < line.length; i++) {
+                var char = line[i];
+
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        // JSON 데이터 형식 검증
+        function validateJSONImportData(data) {
+            // 내보내기 형식인지 확인
+            if (data.members && data.dates && data.year && data.month) {
+                return true;
+            }
+
+            // 백업 형식인지 확인
+            if (data.data && typeof data.data === 'object') {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Excel/CSV 데이터를 import 형식으로 변환
+        function convertExcelToImportData(data) {
+            if (data.length < 2) return null;
+
+            var headers = data[0];
+            var memberRows = data.slice(1);
+
+            // 헤더에서 날짜 추출
+            var dates = [];
+            var dateStartIndex = 3; // 직책, 성명, 합계 다음부터
+
+            for (var i = dateStartIndex; i < headers.length; i++) {
+                var header = headers[i];
+                if (header && typeof header === 'string') {
+                    // 날짜 형식 파싱 (예: "6/1(월)", "2024-06-01" 등)
+                    var dateStr = parseDateFromHeader(header);
+                    if (dateStr) {
+                        dates.push(dateStr);
+                    }
+                }
+            }
+
+            if (dates.length === 0) return null;
+
+            // 멤버 데이터 구성
+            var members = {};
+            var order = 0;
+
+            for (var i = 0; i < memberRows.length; i++) {
+                var row = memberRows[i];
+                if (row.length < 3) continue;
+
+                var role = row[0];
+                var name = row[1];
+
+                if (!name || !role) continue;
+
+                var attendance = {};
+                for (var j = 0; j < dates.length; j++) {
+                    var cellValue = row[dateStartIndex + j];
+                    var status = 0;
+
+                    if (cellValue === '출석' || cellValue === '1' || cellValue === 1) {
+                        status = 1;
+                    }
+
+                    attendance[dates[j]] = status;
+                }
+
+                members[name] = {
+                    role: role,
+                    order: order++,
+                    attendance: attendance,
+                    stats: calculateStatsFromAttendance(attendance, role, dates)
+                };
+            }
+
+            return {
+                year: currentYear,
+                month: currentMonth,
+                members: members,
+                dates: dates,
+                exportDate: new Date().toISOString()
+            };
+        }
+
+        // 헤더에서 날짜 파싱
+        function parseDateFromHeader(header) {
+            // "6/1(월)" 형식
+            var match1 = header.match(/(\d+)\/(\d+)/);
+            if (match1) {
+                var month = parseInt(match1[1]);
+                var day = parseInt(match1[2]);
+                return currentYear + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            }
+
+            // "2024-06-01" 형식
+            var match2 = header.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (match2) {
+                return header;
+            }
+
+            return null;
+        }
+
+        // 출석 데이터에서 통계 계산
+        function calculateStatsFromAttendance(attendance, role, dates) {
+            var total = 0;
+            var wednesday = 0;
+
+            for (var i = 0; i < dates.length; i++) {
+                var date = dates[i];
+                if (attendance[date] === 1) {
+                    total++;
+
+                    var dateObj = new Date(date);
+                    if (dateObj.getDay() === 3) {
+                        wednesday++;
+                    }
+                }
+            }
+
+            // 조건 충족 여부 계산
+            var requirements = {
+                '운영진': { total: 0, wednesday: 0 },
+                '페이서': { total: 3, wednesday: 0 },
+                '페이서 강남': { total: 3, wednesday: 2 },
+                '포토': { total: 1, wednesday: 0 }
+            };
+
+            var req = requirements[role] || { total: 0, wednesday: 0 };
+            var meetsRequirement = role === '운영진' || 
+                                 (total >= req.total && wednesday >= req.wednesday);
+
+            return {
+                total: total,
+                wednesday: wednesday,
+                meets_requirement: meetsRequirement,
+                required_total: req.total,
+                required_wednesday: req.wednesday
+            };
+        }
+
+        // 가져올 데이터 미리보기 표시
+        function showImportPreview() {
+            var previewDiv = document.getElementById('importPreview');
+            var previewContent = document.getElementById('previewContent');
+
+            if (!importData) return;
+
+            var html = '';
+            html += '<p><strong>🗓️ 대상 기간:</strong> ' + importData.year + '년 ' + importData.month + '월</p>';
+            html += '<p><strong>👥 멤버 수:</strong> ' + Object.keys(importData.members || {}).length + '명</p>';
+            html += '<p><strong>📅 출석일 수:</strong> ' + (importData.dates || []).length + '일</p>';
+
+            html += '<div style="margin-top: 15px;"><strong>👤 멤버 목록:</strong></div>';
+            html += '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 5px; border-radius: 4px;">';
+
+            var memberEntries = Object.keys(importData.members || {});
+            memberEntries.sort(function(a, b) {
+                var orderA = importData.members[a].order || 0;
+                var orderB = importData.members[b].order || 0;
+                return orderA - orderB;
+            });
+
+            for (var i = 0; i < memberEntries.length; i++) {
+                var name = memberEntries[i];
+                var member = importData.members[name];
+                var stats = member.stats || {};
+
+                html += '<div style="padding: 5px; border-bottom: 1px solid #eee;">';
+                html += '<strong>' + name + '</strong> (' + (member.role || '미정') + ') - ';
+                html += '출석: ' + (stats.total || 0) + '회';
+                if (member.role === '페이서 강남') {
+                    html += ' (수요일: ' + (stats.wednesday || 0) + '회)';
+                }
+                html += ' - ' + (stats.meets_requirement ? '✅ 충족' : '❌ 미충족');
+                html += '</div>';
+            }
+
+            html += '</div>';
+
+            html += '<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">';
+            html += '<strong>⚠️ 주의사항:</strong><br>';
+            html += '• 현재 ' + currentYear + '년 ' + currentMonth + '월의 모든 데이터가 삭제됩니다<br>';
+            html += '• 가져오기 전에 현재 데이터를 백업하는 것을 권장합니다<br>';
+            html += '• 이 작업은 되돌릴 수 없습니다';
+            html += '</div>';
+
+            previewContent.innerHTML = html;
+            previewDiv.style.display = 'block';
+
+            // 버튼들 표시
+            document.getElementById('previewBtn').style.display = 'inline-block';
+            document.getElementById('confirmBtn').style.display = 'inline-block';
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+        }
+
+        // 미리보기 확장
+        function previewImportData() {
+            // 상세 미리보기 모달이나 페이지를 열 수 있음
+            alert('상세 미리보기 기능은 현재 위의 요약 정보를 참고해주세요.');
+        }
+
+        // 가져오기 확정
+        function confirmImport() {
+            if (!importData) {
+                showMessage('가져올 데이터가 없습니다.', 'error', document.getElementById('importMessage'));
+                return;
+            }
+
+            if (!confirm('정말로 현재 월(' + currentYear + '년 ' + currentMonth + '월)의 모든 데이터를 덮어쓰시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!')) {
+                return;
+            }
+
+            var messageDiv = document.getElementById('importMessage');
+            showMessage('데이터를 가져오는 중입니다...', 'info', messageDiv);
+
+            // 서버에 데이터 전송
+            fetch('/api/import_month_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    data: importData
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                if (result.success) {
+                    showMessage('데이터를 성공적으로 가져왔습니다!', 'success', messageDiv);
+                    resetImportUI();
+
+                    // 화면 새로고침
+                    setTimeout(function() {
+                        loadCurrentMonth();
+                    }, 1000);
+                } else {
+                    showMessage('데이터 가져오기에 실패했습니다: ' + (result.error || '알 수 없는 오류'), 'error', messageDiv);
+                }
+            })
+            .catch(function(error) {
+                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
+            });
+        }
+
+        // 가져오기 취소
+        function cancelImport() {
+            resetImportUI();
+            showMessage('가져오기를 취소했습니다.', 'info', document.getElementById('importMessage'));
+        }
+
+        // Import UI 초기화
+        function resetImportUI() {
+            importData = null;
+            importFileType = null;
+            document.getElementById('importFileInput').value = '';
+            document.getElementById('importPreview').style.display = 'none';
+            document.getElementById('previewBtn').style.display = 'none';
+            document.getElementById('confirmBtn').style.display = 'none';
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        // 현재 월 데이터 로드
+        function loadCurrentMonth() {
+            currentYear = parseInt(document.getElementById('year').value);
+            currentMonth = parseInt(document.getElementById('month').value);
+
+            // 현재 월 표시 업데이트
+            updateCurrentMonthDisplay();
+
+            loadMemberManagement();
+            loadAttendanceTable();
+        }
+
+        // 현재 월 표시 업데이트
+        function updateCurrentMonthDisplay() {
+            var displayElement = document.getElementById('currentMonthDisplay');
+            if (displayElement) {
+                displayElement.textContent = currentYear + '년 ' + currentMonth + '월';
+            }
+        }
+
+        // 전월 멤버 복사
+        function copyFromPreviousMonth() {
+            var messageDiv = document.getElementById('monthMessage');
+
+            fetch('/api/copy_previous_month', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    showMessage('전월 멤버를 성공적으로 복사했습니다!', 'success', messageDiv);
+                    // 전월 멤버 복사 후 첫 번째 멤버 선택
+                    selectedMemberIndex = 0;
+                    loadCurrentMonthWithSync();
+                } else {
+                    showMessage('전월 데이터가 없거나 복사에 실패했습니다.', 'error', messageDiv);
+                }
+            })
+            .catch(function(error) {
+                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
+            });
+        }
+
+        // 멤버 추가
+        function addMember() {
+            var name = document.getElementById('memberName').value.trim();
+            var role = document.getElementById('memberRole').value;
+            var messageDiv = document.getElementById('memberMessage');
+
+            if (!name) {
+                showMessage('이름을 입력해주세요.', 'error', messageDiv);
+                return;
+            }
+
+            fetch('/api/add_member', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    name: name,
+                    role: role
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    showMessage('멤버가 성공적으로 추가되었습니다!', 'success', messageDiv);
+                    document.getElementById('memberName').value = '';
+
+                    // 멤버 추가 후 전체 업데이트 (순서 유지)
+                    loadCurrentMonthWithSync();
+                } else {
+                    showMessage('멤버 추가에 실패했습니다: ' + (data.error || '알 수 없는 오류'), 'error', messageDiv);
+                }
+            })
+            .catch(function(error) {
+                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
+            });
+        }<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -1030,44 +2529,11 @@
     </div>
 
     <script>
-        // 전역 변수
-        var currentYear = 2024;
-        var currentMonth = 6;
-        var currentMembers = {};
-        var editingMember = null;
-        var currentView = 'auto'; // 자동 감지 (모바일: card, PC: table)
-        var selectedMemberIndex = 0; // 현재 선택된 멤버 인덱스
-        var memberList = []; // 멤버 리스트 (정렬된)
-        var userSelectedView = null; // 사용자가 직접 선택한 뷰 (null이면 기본값 사용)
-        var currentReportData = null; // 현재 보고서 데이터 (export용)
-        var importData = null; // 가져올 데이터 임시 저장
-        var importFileType = null; // 가져올 파일 타입
-        
-        // 현재 환경이 모바일인지 확인
-        function isMobile() {
-            return window.innerWidth <= 768;
-        }
-        
-        // 기본 뷰 결정 (모바일: card, PC: table)
-        function getDefaultView() {
-            return isMobile() ? 'card' : 'table';
-        }
-        
-        // 현재 사용해야 할 뷰 결정
-        function getCurrentView() {
-            // 사용자가 직접 선택한 뷰가 있으면 그것 사용
-            if (userSelectedView) {
-                return userSelectedView;
-            }
-            // 없으면 환경에 맞는 기본값 사용
-            return getDefaultView();
-        }
-
         // =============================================================================
         // 보안 및 인증 관련 코드
         // =============================================================================
         
-        // 설정 가능한 암호들 (실제 운영시에는 서버에서 관리하는 것이 안전합니다)
+        // 설정 가능한 암호들
         const VALID_PASSWORDS = [
             'pacer2024',        // 기본 암호
             'physique2024',     // 대체 암호
@@ -1091,57 +2557,6 @@
         // 세션 관리
         let sessionTimer = null;
         
-        // 페이지 로드 시 인증 상태 확인
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuthenticationStatus();
-            setupPasswordInput();
-        });
-        
-        // 인증 상태 확인
-        function checkAuthenticationStatus() {
-            const isAuthenticated = sessionStorage.getItem('attendance_authenticated');
-            const loginTime = sessionStorage.getItem('attendance_login_time');
-            const lockoutTime = localStorage.getItem('attendance_lockout');
-            
-            // 잠금 상태 확인
-            if (lockoutTime && Date.now() < parseInt(lockoutTime)) {
-                showLockoutMessage();
-                return;
-            }
-            
-            // 세션 타임아웃 확인
-            if (isAuthenticated && loginTime) {
-                const timeSinceLogin = Date.now() - parseInt(loginTime);
-                if (timeSinceLogin < SESSION_TIMEOUT) {
-                    // 인증된 상태 - 메인 컨텐츠 표시
-                    showMainContent();
-                    startSessionTimer();
-                } else {
-                    // 세션 만료
-                    logout('세션이 만료되었습니다. 다시 로그인해주세요.');
-                }
-            } else {
-                // 미인증 상태 - 로그인 화면 표시
-                showLoginScreen();
-            }
-        }
-        
-        // 암호 입력 필드 설정
-        function setupPasswordInput() {
-            const passwordInput = document.getElementById('passwordInput');
-            if (passwordInput) {
-                // Enter 키 처리
-                passwordInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        handleLogin(e);
-                    }
-                });
-                
-                // 포커스 설정
-                passwordInput.focus();
-            }
-        }
-        
         // 로그인 처리
         function handleLogin(event) {
             event.preventDefault();
@@ -1154,7 +2569,6 @@
             
             const passwordInput = document.getElementById('passwordInput');
             const password = passwordInput.value.trim();
-            const errorDiv = document.getElementById('loginError');
             
             if (!password) {
                 showLoginError('❌ 암호를 입력해주세요.');
@@ -1341,6 +2755,36 @@
             }
         }
         
+        // 인증 상태 확인
+        function checkAuthenticationStatus() {
+            const isAuthenticated = sessionStorage.getItem('attendance_authenticated');
+            const loginTime = sessionStorage.getItem('attendance_login_time');
+            const lockoutTime = localStorage.getItem('attendance_lockout');
+            
+            // 잠금 상태 확인
+            if (lockoutTime && Date.now() < parseInt(lockoutTime)) {
+                showLockoutMessage();
+                return;
+            }
+            
+            // 세션 타임아웃 확인
+            if (isAuthenticated && loginTime) {
+                const timeSinceLogin = Date.now() - parseInt(loginTime);
+                if (timeSinceLogin < SESSION_TIMEOUT) {
+                    // 인증된 상태 - 메인 컨텐츠 표시
+                    showMainContent();
+                    startSessionTimer();
+                    initializeMainContent();
+                } else {
+                    // 세션 만료
+                    logout('세션이 만료되었습니다. 다시 로그인해주세요.');
+                }
+            } else {
+                // 미인증 상태 - 로그인 화면 표시
+                showLoginScreen();
+            }
+        }
+        
         // 메인 컨텐츠 초기화
         function initializeMainContent() {
             var currentDate = new Date();
@@ -1361,7 +2805,7 @@
             document.getElementById('year').addEventListener('change', loadCurrentMonth);
             document.getElementById('month').addEventListener('change', loadCurrentMonth);
             
-            // 초기 데이터 로드 (데모 데이터)
+            // 초기 데이터 로드
             loadCurrentMonth();
             updateCurrentMonthDisplay();
             
@@ -1371,6 +2815,43 @@
             });
         }
         
+        // =============================================================================
+        // 기존 시스템 코드 (원본 그대로 유지)
+        // =============================================================================
+        
+        // 전역 변수
+        var currentYear = 2024;
+        var currentMonth = 6;
+        var currentMembers = {};
+        var editingMember = null;
+        var currentView = 'auto'; // 자동 감지 (모바일: card, PC: table)
+        var selectedMemberIndex = 0; // 현재 선택된 멤버 인덱스
+        var memberList = []; // 멤버 리스트 (정렬된)
+        var userSelectedView = null; // 사용자가 직접 선택한 뷰 (null이면 기본값 사용)
+        var currentReportData = null; // 현재 보고서 데이터 (export용)
+        var importData = null; // 가져올 데이터 임시 저장
+        var importFileType = null; // 가져올 파일 타입
+        
+        // 현재 환경이 모바일인지 확인
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+        
+        // 기본 뷰 결정 (모바일: card, PC: table)
+        function getDefaultView() {
+            return isMobile() ? 'card' : 'table';
+        }
+        
+        // 현재 사용해야 할 뷰 결정
+        function getCurrentView() {
+            // 사용자가 직접 선택한 뷰가 있으면 그것 사용
+            if (userSelectedView) {
+                return userSelectedView;
+            }
+            // 없으면 환경에 맞는 기본값 사용
+            return getDefaultView();
+        }
+
         // Excel 파일로 내보내기
         function exportToExcel() {
             if (!currentReportData) {
@@ -1494,1530 +2975,3 @@
                 console.error('Summary report error:', error);
             }
         }
-        
-        // Excel 데이터 생성
-        function generateExcelData(reportData) {
-            var data = reportData.members || reportData;
-            var dates = reportData.dates || [];
-            
-            // 멤버를 order 순으로 정렬
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var result = [];
-            
-            // 헤더 행
-            var header = ['직책', '성명', '합계'];
-            for (var i = 0; i < dates.length; i++) {
-                var date = new Date(dates[i]);
-                var month = date.getMonth() + 1;
-                var day = date.getDate();
-                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                var weekday = weekdays[date.getDay()];
-                header.push(month + '/' + day + '(' + weekday + ')');
-            }
-            result.push(header);
-            
-            // 데이터 행
-            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
-                var name = memberEntries[memberIndex];
-                var info = data[name];
-                
-                if (!info || !info.stats) continue;
-                
-                var row = [
-                    info.role || '미정',
-                    name,
-                    info.stats.total || 0
-                ];
-                
-                for (var dateIndex = 0; dateIndex < dates.length; dateIndex++) {
-                    var date = dates[dateIndex];
-                    var attendance = info.attendance || {};
-                    var status = attendance[date] || 0;
-                    row.push(status === 1 ? '출석' : '불참');
-                }
-                
-                result.push(row);
-            }
-            
-            return result;
-        }
-        
-        // 요약 통계 데이터 생성
-        function generateSummaryData(reportData) {
-            var data = reportData.members || reportData;
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var result = [];
-            result.push(['이름', '직책', '총 출석', '수요일 출석', '조건 충족', '달성률(%)']);
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                
-                if (!info || !info.stats) continue;
-                
-                var stats = info.stats;
-                var role = info.role || '미정';
-                
-                // 달성률 계산
-                var achievementRate = 0;
-                if (role !== '운영진' && stats.required_total > 0) {
-                    achievementRate = Math.round((stats.total / stats.required_total) * 100);
-                }
-                
-                result.push([
-                    name,
-                    role,
-                    stats.total || 0,
-                    stats.wednesday || 0,
-                    stats.meets_requirement ? '충족' : '미충족',
-                    role === '운영진' ? 'N/A' : achievementRate + '%'
-                ]);
-            }
-            
-            return result;
-        }
-        
-        // CSV 컨텐츠 생성
-        function generateCSVContent(reportData) {
-            var excelData = generateExcelData(reportData);
-            var csvContent = '';
-            
-            for (var i = 0; i < excelData.length; i++) {
-                var row = excelData[i];
-                var csvRow = row.map(function(cell) {
-                    // CSV에서 쉼표와 따옴표 처리
-                    var cellStr = String(cell);
-                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-                        cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
-                    }
-                    return cellStr;
-                }).join(',');
-                
-                csvContent += csvRow + '\n';
-            }
-            
-            // UTF-8 BOM 추가 (한글 깨짐 방지)
-            return '\uFEFF' + csvContent;
-        }
-        
-        // 요약 보고서 생성 (계속)
-        function generateSummaryReport(reportData) {
-            var data = reportData.members || reportData;
-            var dates = reportData.dates || [];
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var report = '';
-            report += '='.repeat(60) + '\n';
-            report += '               출석 관리 시스템 요약 보고서\n';
-            report += '='.repeat(60) + '\n';
-            report += '보고서 생성일: ' + new Date().toLocaleString('ko-KR') + '\n';
-            report += '대상 기간: ' + currentYear + '년 ' + currentMonth + '월\n';
-            report += '총 출석일: ' + dates.length + '일\n';
-            report += '총 멤버수: ' + memberEntries.length + '명\n';
-            report += '\n';
-            
-            // 역할별 통계
-            var roleStats = {};
-            var totalPass = 0;
-            var totalFail = 0;
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                if (!info || !info.stats) continue;
-                
-                var role = info.role || '미정';
-                if (!roleStats[role]) {
-                    roleStats[role] = { total: 0, pass: 0, fail: 0 };
-                }
-                
-                roleStats[role].total++;
-                if (info.stats.meets_requirement) {
-                    roleStats[role].pass++;
-                    totalPass++;
-                } else {
-                    roleStats[role].fail++;
-                    totalFail++;
-                }
-            }
-            
-            report += '[ 역할별 통계 ]\n';
-            report += '-'.repeat(40) + '\n';
-            for (var role in roleStats) {
-                var stat = roleStats[role];
-                var passRate = stat.total > 0 ? Math.round((stat.pass / stat.total) * 100) : 0;
-                report += role + ': ' + stat.total + '명 (충족: ' + stat.pass + '명, 미충족: ' + stat.fail + '명, 충족률: ' + passRate + '%)\n';
-            }
-            report += '\n';
-            
-            report += '[ 전체 요약 ]\n';
-            report += '-'.repeat(40) + '\n';
-            var overallPassRate = (totalPass + totalFail) > 0 ? Math.round((totalPass / (totalPass + totalFail)) * 100) : 0;
-            report += '조건 충족: ' + totalPass + '명\n';
-            report += '조건 미충족: ' + totalFail + '명\n';
-            report += '전체 충족률: ' + overallPassRate + '%\n';
-            report += '\n';
-            
-            report += '[ 개별 멤버 상세 ]\n';
-            report += '-'.repeat(60) + '\n';
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                if (!info || !info.stats) continue;
-                
-                var stats = info.stats;
-                var role = info.role || '미정';
-                
-                report += (i + 1) + '. ' + name + ' (' + role + ')\n';
-                report += '   총 출석: ' + (stats.total || 0) + '회';
-                if (role === '페이서 강남') {
-                    report += ' (수요일: ' + (stats.wednesday || 0) + '회)';
-                }
-                report += '\n';
-                
-                if (role !== '운영진') {
-                    report += '   필요 출석: ' + (stats.required_total || 0) + '회';
-                    if (stats.required_wednesday > 0) {
-                        report += ' (수요일: ' + stats.required_wednesday + '회)';
-                    }
-                    report += '\n';
-                    report += '   조건 충족: ' + (stats.meets_requirement ? '✓ 충족' : '✗ 미충족') + '\n';
-                }
-                report += '\n';
-            }
-            
-            report += '[ 출석 조건 안내 ]\n';
-            report += '-'.repeat(40) + '\n';
-            report += '• 운영진: 출석 조건 없음\n';
-            report += '• 페이서: 월 3회 이상 출석\n';
-            report += '• 페이서 강남: 월 3회 이상 출석 (그 중 수요일 2회 이상)\n';
-            report += '• 포토: 월 1회 이상 출석\n';
-            report += '\n';
-            
-            report += '='.repeat(60) + '\n';
-            report += '                    보고서 끝\n';
-            report += '='.repeat(60) + '\n';
-            
-            return report;
-        }
-        
-        // 파일 다운로드 함수
-        function downloadFile(content, fileName, mimeType) {
-            var blob = new Blob([content], { type: mimeType });
-            var url = window.URL.createObjectURL(blob);
-            
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.style.display = 'none';
-            
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            window.URL.revokeObjectURL(url);
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {More actions
-            var currentDate = new Date();
-            currentYear = currentDate.getFullYear();
-            currentMonth = currentDate.getMonth() + 1;
-
-            document.getElementById('year').value = currentYear;
-            document.getElementById('month').value = currentMonth;
-
-            // Enter 키 처리
-            document.getElementById('memberName').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    addMember();
-                }
-            });
-
-            // 년도/월 변경 시 자동 조회
-            document.getElementById('year').addEventListener('change', loadCurrentMonth);
-            document.getElementById('month').addEventListener('change', loadCurrentMonth);
-
-            // 초기 데이터 로드
-            loadCurrentMonth();
-            updateCurrentMonthDisplay();
-
-            // 파일 입력 변경 감지
-            document.getElementById('importFileInput').addEventListener('change', function(e) {
-                resetImportUI();
-            });
-        });
-
-        // =============================================================================
-        // IMPORT 기능들
-        // =============================================================================
-
-        // 파일에서 데이터 가져오기
-        function importFromFile() {
-            var fileInput = document.getElementById('importFileInput');
-            var file = fileInput.files[0];
-            var messageDiv = document.getElementById('importMessage');
-
-            if (!file) {
-                showMessage('파일을 선택해주세요.', 'error', messageDiv);
-                return;
-            }
-
-            // 지원하는 파일 형식 확인
-            var fileName = file.name.toLowerCase();
-            if (fileName.endsWith('.json')) {
-                importFileType = 'json';
-                readJSONFile(file);
-            } else if (fileName.endsWith('.xlsx')) {
-                importFileType = 'excel';
-                readExcelFile(file);
-            } else if (fileName.endsWith('.csv')) {
-                importFileType = 'csv';
-                readCSVFile(file);
-            } else {
-                showMessage('지원하지 않는 파일 형식입니다. JSON, Excel(.xlsx), CSV 파일만 지원합니다.', 'error', messageDiv);
-                return;
-            }
-        }
-
-        // JSON 파일 읽기
-        function readJSONFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-
-            reader.onload = function(e) {
-                try {
-                    var jsonData = JSON.parse(e.target.result);
-
-                    // JSON 데이터 형식 검증
-                    if (validateJSONImportData(jsonData)) {
-                        importData = jsonData;
-                        showImportPreview();
-                        showMessage('파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('올바르지 않은 JSON 데이터 형식입니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('JSON 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-
-            reader.readAsText(file);
-        }
-
-        // Excel 파일 읽기
-        function readExcelFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-
-            reader.onload = function(e) {
-                try {
-                    var data = new Uint8Array(e.target.result);
-                    var workbook = XLSX.read(data, { type: 'array' });
-
-                    // 첫 번째 시트에서 데이터 추출
-                    var firstSheetName = workbook.SheetNames[0];
-                    var worksheet = workbook.Sheets[firstSheetName];
-                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-                    // Excel 데이터를 JSON 형식으로 변환
-                    var convertedData = convertExcelToImportData(jsonData);
-
-                    if (convertedData) {
-                        importData = convertedData;
-                        showImportPreview();
-                        showMessage('Excel 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('Excel 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('Excel 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-
-            reader.readAsArrayBuffer(file);
-        }
-
-        // CSV 파일 읽기
-        function readCSVFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-
-            reader.onload = function(e) {
-                try {
-                    var csvText = e.target.result;
-                    var lines = csvText.split('\n');
-                    var csvData = [];
-
-                    for (var i = 0; i < lines.length; i++) {
-                        if (lines[i].trim()) {
-                            csvData.push(parseCSVLine(lines[i]));
-                        }
-                    }
-
-                    // CSV 데이터를 JSON 형식으로 변환
-                    var convertedData = convertExcelToImportData(csvData); // Excel과 동일한 형식
-
-                    if (convertedData) {
-                        importData = convertedData;
-                        showImportPreview();
-                        showMessage('CSV 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('CSV 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('CSV 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-
-            reader.readAsText(file, 'UTF-8');
-        }
-
-        // CSV 라인 파싱
-        function parseCSVLine(line) {
-            var result = [];
-            var current = '';
-            var inQuotes = false;
-
-            for (var i = 0; i < line.length; i++) {
-                var char = line[i];
-
-                if (char === '"') {
-                    if (inQuotes && line[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-
-            result.push(current.trim());
-            return result;
-        }
-
-        // JSON 데이터 형식 검증
-        function validateJSONImportData(data) {
-            // 내보내기 형식인지 확인
-            if (data.members && data.dates && data.year && data.month) {
-                return true;
-            }
-
-            // 백업 형식인지 확인
-            if (data.data && typeof data.data === 'object') {
-                return true;
-            }
-
-            return false;
-        }
-
-        // Excel/CSV 데이터를 import 형식으로 변환
-        function convertExcelToImportData(data) {
-            if (data.length < 2) return null;
-
-            var headers = data[0];
-            var memberRows = data.slice(1);
-
-            // 헤더에서 날짜 추출
-            var dates = [];
-            var dateStartIndex = 3; // 직책, 성명, 합계 다음부터
-
-            for (var i = dateStartIndex; i < headers.length; i++) {
-                var header = headers[i];
-                if (header && typeof header === 'string') {
-                    // 날짜 형식 파싱 (예: "6/1(월)", "2024-06-01" 등)
-                    var dateStr = parseDateFromHeader(header);
-                    if (dateStr) {
-                        dates.push(dateStr);
-                    }
-                }
-            }
-
-            if (dates.length === 0) return null;
-
-            // 멤버 데이터 구성
-            var members = {};
-            var order = 0;
-
-            for (var i = 0; i < memberRows.length; i++) {
-                var row = memberRows[i];
-                if (row.length < 3) continue;
-
-                var role = row[0];
-                var name = row[1];
-
-                if (!name || !role) continue;
-
-                var attendance = {};
-                for (var j = 0; j < dates.length; j++) {
-                    var cellValue = row[dateStartIndex + j];
-                    var status = 0;
-
-                    if (cellValue === '출석' || cellValue === '1' || cellValue === 1) {
-                        status = 1;
-                    }
-
-                    attendance[dates[j]] = status;
-                }
-
-                members[name] = {
-                    role: role,
-                    order: order++,
-                    attendance: attendance,
-                    stats: calculateStatsFromAttendance(attendance, role, dates)
-                };
-            }
-
-            return {
-                year: currentYear,
-                month: currentMonth,
-                members: members,
-                dates: dates,
-                exportDate: new Date().toISOString()
-            };
-        }
-
-        // 헤더에서 날짜 파싱
-        function parseDateFromHeader(header) {
-            // "6/1(월)" 형식
-            var match1 = header.match(/(\d+)\/(\d+)/);
-            if (match1) {
-                var month = parseInt(match1[1]);
-                var day = parseInt(match1[2]);
-                return currentYear + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            }
-
-            // "2024-06-01" 형식
-            var match2 = header.match(/(\d{4})-(\d{2})-(\d{2})/);
-            if (match2) {
-                return header;
-            }
-
-            return null;
-        }
-
-        // 출석 데이터에서 통계 계산
-        function calculateStatsFromAttendance(attendance, role, dates) {
-            var total = 0;
-            var wednesday = 0;
-
-            for (var i = 0; i < dates.length; i++) {
-                var date = dates[i];
-                if (attendance[date] === 1) {
-                    total++;
-
-                    var dateObj = new Date(date);
-                    if (dateObj.getDay() === 3) {
-                        wednesday++;
-                    }
-                }
-            }
-
-            // 조건 충족 여부 계산
-            var requirements = {
-                '운영진': { total: 0, wednesday: 0 },
-                '페이서': { total: 3, wednesday: 0 },
-                '페이서 강남': { total: 3, wednesday: 2 },
-                '포토': { total: 1, wednesday: 0 }
-            };
-
-            var req = requirements[role] || { total: 0, wednesday: 0 };
-            var meetsRequirement = role === '운영진' || 
-                                 (total >= req.total && wednesday >= req.wednesday);
-
-            return {
-                total: total,
-                wednesday: wednesday,
-                meets_requirement: meetsRequirement,
-                required_total: req.total,
-                required_wednesday: req.wednesday
-            };
-        }
-
-        // 가져올 데이터 미리보기 표시
-        function showImportPreview() {
-            var previewDiv = document.getElementById('importPreview');
-            var previewContent = document.getElementById('previewContent');
-
-            if (!importData) return;
-
-            var html = '';
-            html += '<p><strong>🗓️ 대상 기간:</strong> ' + importData.year + '년 ' + importData.month + '월</p>';
-            html += '<p><strong>👥 멤버 수:</strong> ' + Object.keys(importData.members || {}).length + '명</p>';
-            html += '<p><strong>📅 출석일 수:</strong> ' + (importData.dates || []).length + '일</p>';
-
-            html += '<div style="margin-top: 15px;"><strong>👤 멤버 목록:</strong></div>';
-            html += '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 5px; border-radius: 4px;">';
-
-            var memberEntries = Object.keys(importData.members || {});
-            memberEntries.sort(function(a, b) {
-                var orderA = importData.members[a].order || 0;
-                var orderB = importData.members[b].order || 0;
-                return orderA - orderB;
-            });
-
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var member = importData.members[name];
-                var stats = member.stats || {};
-
-                html += '<div style="padding: 5px; border-bottom: 1px solid #eee;">';
-                html += '<strong>' + name + '</strong> (' + (member.role || '미정') + ') - ';
-                html += '출석: ' + (stats.total || 0) + '회';
-                if (member.role === '페이서 강남') {
-                    html += ' (수요일: ' + (stats.wednesday || 0) + '회)';
-                }
-                html += ' - ' + (stats.meets_requirement ? '✅ 충족' : '❌ 미충족');
-                html += '</div>';
-            }
-
-            html += '</div>';
-
-            html += '<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">';
-            html += '<strong>⚠️ 주의사항:</strong><br>';
-            html += '• 현재 ' + currentYear + '년 ' + currentMonth + '월의 모든 데이터가 삭제됩니다<br>';
-            html += '• 가져오기 전에 현재 데이터를 백업하는 것을 권장합니다<br>';
-            html += '• 이 작업은 되돌릴 수 없습니다';
-            html += '</div>';
-
-            previewContent.innerHTML = html;
-            previewDiv.style.display = 'block';
-
-            // 버튼들 표시
-            document.getElementById('previewBtn').style.display = 'inline-block';
-            document.getElementById('confirmBtn').style.display = 'inline-block';
-            document.getElementById('cancelBtn').style.display = 'inline-block';
-        }
-
-        // 미리보기 확장
-        function previewImportData() {
-            // 상세 미리보기 모달이나 페이지를 열 수 있음
-            alert('상세 미리보기 기능은 현재 위의 요약 정보를 참고해주세요.');
-        }
-
-        // 가져오기 확정
-        function confirmImport() {
-            if (!importData) {
-                showMessage('가져올 데이터가 없습니다.', 'error', document.getElementById('importMessage'));
-                return;
-            }
-
-            if (!confirm('정말로 현재 월(' + currentYear + '년 ' + currentMonth + '월)의 모든 데이터를 덮어쓰시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!')) {
-                return;
-            }
-
-            var messageDiv = document.getElementById('importMessage');
-            showMessage('데이터를 가져오는 중입니다...', 'info', messageDiv);
-
-            // 서버에 데이터 전송
-            fetch('/api/import_month_data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    data: importData
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(result) {
-                if (result.success) {
-                    showMessage('데이터를 성공적으로 가져왔습니다!', 'success', messageDiv);
-                    resetImportUI();
-
-                    // 화면 새로고침
-                    setTimeout(function() {
-                        loadCurrentMonth();
-                    }, 1000);
-                } else {
-                    showMessage('데이터 가져오기에 실패했습니다: ' + (result.error || '알 수 없는 오류'), 'error', messageDiv);
-                }
-            })
-            .catch(function(error) {
-                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
-            });
-        }
-
-        // 가져오기 취소
-        function cancelImport() {
-            resetImportUI();
-            showMessage('가져오기를 취소했습니다.', 'info', document.getElementById('importMessage'));
-        }
-
-        // Import UI 초기화
-        function resetImportUI() {
-            importData = null;
-            importFileType = null;
-            document.getElementById('importFileInput').value = '';
-            document.getElementById('importPreview').style.display = 'none';
-            document.getElementById('previewBtn').style.display = 'none';
-            document.getElementById('confirmBtn').style.display = 'none';
-            document.getElementById('cancelBtn').style.display = 'none';
-        }
-
-        // 현재 월 데이터 로드
-        function loadCurrentMonth() {
-            currentYear = parseInt(document.getElementById('year').value);
-            currentMonth = parseInt(document.getElementById('month').value);
-
-            // 현재 월 표시 업데이트
-            updateCurrentMonthDisplay();
-
-            loadMemberManagement();
-            loadAttendanceTable();
-        }
-
-        // 현재 월 표시 업데이트
-        function updateCurrentMonthDisplay() {
-            var displayElement = document.getElementById('currentMonthDisplay');
-            if (displayElement) {
-                displayElement.textContent = currentYear + '년 ' + currentMonth + '월';
-            }
-        }
-
-        // 전월 멤버 복사
-        function copyFromPreviousMonth() {
-            var messageDiv = document.getElementById('monthMessage');
-
-            fetch('/api/copy_previous_month', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    showMessage('전월 멤버를 성공적으로 복사했습니다!', 'success', messageDiv);
-                    // 전월 멤버 복사 후 첫 번째 멤버 선택
-                    selectedMemberIndex = 0;
-                    loadCurrentMonthWithSync();
-                } else {
-                    showMessage('전월 데이터가 없거나 복사에 실패했습니다.', 'error', messageDiv);
-                }
-            })
-            .catch(function(error) {
-                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
-            });
-        }
-
-        // 멤버 추가
-        function addMember() {
-            var name = document.getElementById('memberName').value.trim();
-            var role = document.getElementById('memberRole').value;
-            var messageDiv = document.getElementById('memberMessage');
-
-            if (!name) {
-                showMessage('이름을 입력해주세요.', 'error', messageDiv);
-                return;
-            }
-
-            fetch('/api/add_member', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: name,
-                    role: role
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    showMessage('멤버가 성공적으로 추가되었습니다!', 'success', messageDiv);
-                    document.getElementById('memberName').value = '';
-
-                    // 멤버 추가 후 전체 업데이트 (순서 유지)
-                    loadCurrentMonthWithSync();
-                } else {
-                    showMessage('멤버 추가에 실패했습니다: ' + (data.error || '알 수 없는 오류'), 'error', messageDiv);
-                }
-            })
-            .catch(function(error) {
-                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
-            });
-        }
-
-        // 멤버 삭제
-        function deleteMember(name) {
-            if (!confirm("'" + name + "' 멤버를 정말 삭제하시겠습니까?")) {
-                return;
-            }
-
-            // 현재 선택된 멤버 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-
-            fetch('/api/member/' + currentYear + '/' + currentMonth + '/' + encodeURIComponent(name), {
-                method: 'DELETE'
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    // 삭제된 멤버가 현재 선택된 멤버인 경우 첫 번째 멤버로 변경
-                    if (currentSelectedMemberName === name) {
-                        selectedMemberIndex = 0;
-                        loadCurrentMonthWithSync();
-                    } else {
-                        // 다른 멤버가 선택된 경우 선택 유지
-                        loadCurrentMonthWithSync(currentSelectedMemberName);
-                    }
-                } else {
-                    alert('멤버 삭제에 실패했습니다.');
-                }
-            })
-            .catch(function(error) {
-                alert('네트워크 오류가 발생했습니다: ' + error);
-            });
-        }
-
-        // 역할 변경 완료 후 업데이트
-        function updateMemberRole() {
-            if (!editingMember) return;
-
-            // 현재 선택된 멤버 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-
-            var newRole = document.getElementById('newRole').value;
-
-            fetch('/api/member_role', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: editingMember,
-                    role: newRole
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    closeRoleModal();
-                    // 역할 변경 후 선택 유지하면서 업데이트
-                    loadCurrentMonthWithSync(currentSelectedMemberName);
-                } else {
-                    alert('역할 변경에 실패했습니다.');
-                }
-            })
-            .catch(function(error) {
-                alert('네트워크 오류가 발생했습니다: ' + error);
-            });
-        }
-
-        // 멤버 관리와 출석 현황을 동기화하여 로드
-        function loadCurrentMonthWithSync(selectedMemberName) {
-            // 멤버 관리 먼저 로드
-            loadMemberManagement();
-
-            // 출석 현황을 선택된 멤버와 함께 로드
-            if (selectedMemberName) {
-                loadAttendanceTableWithMemberSelection(selectedMemberName);
-            } else {
-                loadAttendanceTable();
-            }
-        }
-
-        // 역할 변경 모달
-        function openRoleModal(name, currentRole) {
-            editingMember = name;
-            document.getElementById('roleModalMemberName').textContent = name + '의 역할 변경';
-            document.getElementById('newRole').value = currentRole;
-            document.getElementById('roleModal').style.display = 'block';
-        }
-
-        function closeRoleModal() {
-            document.getElementById('roleModal').style.display = 'none';
-            editingMember = null;
-        }
-
-        // 멤버 관리 로드
-        function loadMemberManagement() {
-            var container = document.getElementById('memberManagement');
-            container.innerHTML = '<div class="loading">멤버 목록을 불러오는 중입니다...</div>';
-
-            fetch('/api/members/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                currentMembers = data;
-                displayMemberManagement(data);
-            })
-            .catch(function(error) {
-                container.innerHTML = '<div class="error">멤버 목록을 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
-            });
-        }
-
-        // 멤버 관리 화면 표시
-        function displayMemberManagement(members) {
-            var container = document.getElementById('memberManagement');
-
-            if (Object.keys(members).length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
-                return;
-            }
-
-            // 멤버를 order 순으로 정렬
-            var memberEntries = Object.keys(members);
-            memberEntries.sort(function(a, b) {
-                var orderA = members[a].order || 0;
-                var orderB = members[b].order || 0;
-                return orderA - orderB;
-            });
-
-            var html = '<div class="member-management" id="sortable-members">';
-
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var member = members[name];
-
-                html += '<div class="member-card" data-member-name="' + name + '">';
-                html += '<div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>';
-                html += '<div class="member-info">';
-                html += '<div class="member-name">' + name + '</div>';
-                html += '<div class="member-role">' + member.role + '</div>';
-                html += '</div>';
-                html += '<div class="member-actions">';
-                html += '<button class="btn-warning" onclick="openRoleModal(\'' + name + '\', \'' + member.role + '\')">역할 변경</button>';
-                html += '<button class="btn-danger" onclick="deleteMember(\'' + name + '\')">삭제</button>';
-                html += '</div>';
-                html += '</div>';
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-
-            // Sortable 초기화
-            setTimeout(function() {
-                initializeSortable();
-            }, 100);
-        }
-
-        // Sortable 초기화
-        function initializeSortable() {
-            var memberContainer = document.querySelector('#sortable-members');
-
-            if (!memberContainer) return;
-            if (typeof Sortable === 'undefined') return;
-
-            if (memberContainer.sortableInstance) {
-                memberContainer.sortableInstance.destroy();
-            }
-
-            memberContainer.sortableInstance = Sortable.create(memberContainer, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
-                handle: '.drag-handle',
-                onEnd: function(evt) {
-                    if (evt.oldIndex !== evt.newIndex) {
-                        updateMemberOrderByDrag(evt.oldIndex, evt.newIndex);
-                    }
-                }
-            });
-        }
-
-        // 드래그로 순서 변경
-        function updateMemberOrderByDrag(oldIndex, newIndex) {
-            var memberNames = Object.keys(currentMembers);
-            memberNames.sort(function(a, b) {
-                var orderA = currentMembers[a].order || 0;
-                var orderB = currentMembers[b].order || 0;
-                return orderA - orderB;
-            });
-
-            // 현재 선택된 멤버 이름 저장 (카드뷰용)
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-
-            // 배열에서 요소 이동
-            var movedMember = memberNames.splice(oldIndex, 1)[0];
-            memberNames.splice(newIndex, 0, movedMember);
-
-            // 새로운 order 값들 생성
-            var orders = [];
-            for (var i = 0; i < memberNames.length; i++) {
-                orders.push({
-                    name: memberNames[i],
-                    order: i
-                });
-            }
-
-            // 서버에 업데이트 요청
-            fetch('/api/member_orders', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    orders: orders
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    // 멤버 관리와 출석 현황 모두 업데이트
-                    loadMemberManagement();
-
-                    // 출석 현황도 업데이트하되, 카드뷰에서 선택된 멤버 유지
-                    loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
-                } else {
-                    alert('순서 변경에 실패했습니다.');
-                    loadCurrentMonth();
-                }
-            })
-            .catch(function(error) {
-                alert('네트워크 오류가 발생했습니다: ' + error);
-                loadCurrentMonth();
-            });
-        }
-
-        // 선택된 멤버를 유지하면서 출석 테이블 로드
-        function loadAttendanceTableWithMemberSelection(selectedMemberName) {
-            var container = document.getElementById('attendanceTable');
-            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
-
-            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                // Export용 데이터 저장
-                currentReportData = data;
-
-                // 새로운 순서로 멤버 리스트 업데이트
-                var memberEntries = Object.keys(data.members || data);
-                memberEntries.sort(function(a, b) {
-                    var dataObj = data.members || data;
-                    var orderA = dataObj[a].order || 0;
-                    var orderB = dataObj[b].order || 0;
-                    return orderA - orderB;
-                });
-
-                // 이전에 선택된 멤버의 새로운 인덱스 찾기
-                if (selectedMemberName && memberEntries.indexOf(selectedMemberName) !== -1) {
-                    selectedMemberIndex = memberEntries.indexOf(selectedMemberName);
-                } else {
-                    // 이전 선택이 없거나 해당 멤버가 없으면 첫 번째 멤버 선택
-                    selectedMemberIndex = 0;
-                }
-
-                displayAttendanceTable(data, currentYear, currentMonth);
-            })
-            .catch(function(error) {
-                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
-            });
-        }
-
-        // 출석 테이블 로드
-        function loadAttendanceTable() {
-            var container = document.getElementById('attendanceTable');
-            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
-
-            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                // Export용 데이터 저장
-                currentReportData = data;
-                displayAttendanceTable(data, currentYear, currentMonth);
-            })
-            .catch(function(error) {
-                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
-            });
-        }
-
-        // 출석 테이블 표시
-        function displayAttendanceTable(responseData, year, month) {
-            var container = document.getElementById('attendanceTable');
-            var data = responseData.members || responseData;
-            var dates = responseData.dates || [];
-
-            if (Object.keys(data).length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
-                return;
-            }
-
-            // 멤버를 order 순으로 정렬
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-
-            // 날짜가 없으면 첫 번째 멤버의 출석 데이터에서 추출
-            var finalDates = dates;
-            if (finalDates.length === 0 && memberEntries.length > 0) {
-                finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
-            }
-
-            var html = '';
-
-            // 현재 사용할 뷰 결정
-            var viewToUse = getCurrentView();
-
-            // 뷰 토글 버튼 (PC와 모바일 모두 표시)
-            html += '<div class="view-toggle">';
-
-            if (viewToUse === 'table') {
-                html += '<button id="tableViewBtn" class="active" onclick="switchToTableView()">📊 테이블 뷰</button>';
-                html += '<button id="cardViewBtn" onclick="switchToCardView()">📋 카드 뷰</button>';
-            } else {
-                html += '<button id="tableViewBtn" onclick="switchToTableView()">📊 테이블 뷰</button>';
-                html += '<button id="cardViewBtn" class="active" onclick="switchToCardView()">📋 카드 뷰</button>';
-            }
-
-            html += '</div>';
-
-            // 데스크톱 테이블 뷰
-            html += '<div class="desktop-view"' + (viewToUse === 'table' ? '' : ' style="display: none;"') + '>';
-            html += generateTableView(data, memberEntries, finalDates, year, month);
-            html += '</div>';
-
-            // 모바일 카드 뷰
-            html += '<div class="mobile-view"' + (viewToUse === 'card' ? '' : ' style="display: none;"') + '>';
-            html += generateCardView(data, memberEntries, finalDates, year, month);
-            html += '</div>';
-
-            // 범례 추가
-            html += '<div style="margin-top: 30px; padding: 25px; background: #f8f9fa; border-radius: 10px;">';
-            html += '<h3>📋 출석 조건 및 사용법</h3>';
-            html += '<ul style="list-style: none; margin: 15px 0;">';
-            html += '<li style="padding: 5px 0;">▶ <strong>운영진:</strong> 출석 조건 없음</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>';
-            html += '</ul>';
-            html += '<div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0;">';
-            html += '<p style="margin: 5px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>';
-            if (isMobile()) {
-                html += '<p style="margin: 5px 0; color: #1565c0;">• 📱 모바일: 기본 카드 뷰, 멤버별 개별 확인</p>';
-            } else {
-                html += '<p style="margin: 5px 0; color: #1565c0;">• 🖥️ PC: 기본 테이블 뷰, 전체 한눈에 확인</p>';
-            }
-            html += '</div>';
-            html += '</div>';
-
-            container.innerHTML = html;
-
-            // 현재 뷰 상태 설정
-            currentView = viewToUse;
-        }
-
-        // 테이블 뷰 생성
-        function generateTableView(data, memberEntries, finalDates, year, month) {
-            var isMobile = window.innerWidth <= 768;
-            var html = '';
-
-            if (isMobile && finalDates.length > 4) {
-                html += '<div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">📱 표를 좌우로 스크롤하여 모든 날짜를 확인하세요</div>';
-            }
-
-            html += '<div class="table-container">';
-            html += '<table class="attendance-table">';
-
-            // 헤더
-            html += '<thead><tr>';
-            html += '<th style="min-width: 60px;">직책</th>';
-            html += '<th style="min-width: 80px;">성명</th>';
-            html += '<th style="min-width: 50px;">합계</th>';
-
-            for (var i = 0; i < finalDates.length; i++) {
-                var date = finalDates[i];
-                var dateObj = new Date(date);
-                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                var weekday = weekdays[dateObj.getDay()];
-                var day = dateObj.getDate();
-                html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
-            }
-            html += '</tr></thead>';
-
-            // 바디
-            html += '<tbody>';
-            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
-                var name = memberEntries[memberIndex];
-                var info = data[name];
-
-                if (!info || !info.stats) continue;
-
-                var stats = info.stats;
-                var rowClass = stats.meets_requirement ? 'pass' : 'fail';
-
-                html += '<tr class="' + rowClass + '">';
-                html += '<td><strong>' + (info.role || '미정') + '</strong></td>';
-                html += '<td><strong>' + name + '</strong></td>';
-                html += '<td><strong>' + (stats.total || 0) + '</strong></td>';
-
-                for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
-                    var date = finalDates[dateIndex];
-                    var attendance = info.attendance || {};
-                    var status = attendance[date] || 0;
-                    var cellClass = status === 1 ? 'present' : 'absent';
-                    var displayText = status === 1 ? '1' : '0';
-
-                    html += '<td class="attendance-cell ' + cellClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
-                    html += displayText;
-                    html += '</td>';
-                }
-                html += '</tr>';
-            }
-            html += '</tbody></table></div>';
-
-            return html;
-        }
-
-        // 카드 뷰 생성 - 선택된 멤버만 표시
-        function generateCardView(data, memberEntries, finalDates, year, month) {
-            memberList = memberEntries; // 전역 변수에 저장
-
-            var html = '';
-
-            // 멤버 선택 드롭다운
-            html += '<div class="member-selector">';
-            html += '<label>👤 멤버 선택:</label>';
-            html += '<select id="memberSelect" onchange="changeMember()">';
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var selected = i === selectedMemberIndex ? ' selected' : '';
-                html += '<option value="' + i + '"' + selected + '>' + name + '</option>';
-            }
-            html += '</select>';
-            html += '</div>';
-
-            // 네비게이션 버튼
-            html += '<div class="card-navigation">';
-            html += '<button class="nav-button" onclick="previousMember()" ' + (selectedMemberIndex <= 0 ? 'disabled' : '') + '>← 이전</button>';
-            html += '<div class="member-indicator">' + (selectedMemberIndex + 1) + ' / ' + memberEntries.length + '</div>';
-            html += '<button class="nav-button" onclick="nextMember()" ' + (selectedMemberIndex >= memberEntries.length - 1 ? 'disabled' : '') + '>다음 →</button>';
-            html += '</div>';
-
-            // 선택된 멤버 카드 표시
-            html += '<div class="single-card-container">';
-
-            if (memberEntries.length === 0) {
-                html += '<div class="no-member-selected">';
-                html += '<h3>등록된 멤버가 없습니다</h3>';
-                html += '<p>멤버를 추가해주세요.</p>';
-                html += '</div>';
-            } else if (selectedMemberIndex >= 0 && selectedMemberIndex < memberEntries.length) {
-                var name = memberEntries[selectedMemberIndex];
-                var info = data[name];
-
-                if (info && info.stats) {
-                    var stats = info.stats;
-                    var cardClass = stats.meets_requirement ? 'pass' : 'fail';
-
-                    html += '<div class="member-card-view ' + cardClass + '" style="width: 100%; max-width: 600px;">';
-
-                    // 멤버 헤더
-                    html += '<div class="member-header-mobile">';
-                    html += '<div class="member-name-mobile">' + name + '</div>';
-                    html += '<div class="member-role-mobile">' + (info.role || '미정') + '</div>';
-                    html += '</div>';
-
-                    // 통계
-                    html += '<div class="member-stats-mobile">';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">총 출석</div>';
-                    html += '<div class="stat-value">' + (stats.total || 0) + '회</div>';
-                    html += '</div>';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">수요일 출석</div>';
-                    html += '<div class="stat-value">' + (stats.wednesday || 0) + '회</div>';
-                    html += '</div>';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">조건 충족</div>';
-                    html += '<div class="stat-value">' + (stats.meets_requirement ? '✅' : '❌') + '</div>';
-                    html += '</div>';
-                    html += '</div>';
-
-                    // 출석 그리드
-                    html += '<div class="attendance-grid-mobile">';
-                    for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
-                        var date = finalDates[dateIndex];
-                        var dateObj = new Date(date);
-                        var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                        var weekday = weekdays[dateObj.getDay()];
-                        var day = dateObj.getDate();
-
-                        var attendance = info.attendance || {};
-                        var status = attendance[date] || 0;
-                        var itemClass = status === 1 ? 'present' : 'absent';
-                        var displayText = status === 1 ? '출석' : '불참';
-
-                        html += '<div class="attendance-item-mobile ' + itemClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
-                        html += '<div class="date-label-mobile">' + month + '/' + day + '<br>' + weekday + '</div>';
-                        html += '<div class="attendance-value-mobile">' + displayText + '</div>';
-                        html += '</div>';
-                    }
-                    html += '</div>';
-
-                    html += '</div>';
-                }
-            }
-
-            html += '</div>';
-
-            return html;
-        }
-
-        // 멤버 네비게이션 함수들
-        function previousMember() {
-            if (selectedMemberIndex > 0) {
-                selectedMemberIndex--;
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-
-        function nextMember() {
-            if (selectedMemberIndex < memberList.length - 1) {
-                selectedMemberIndex++;
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-
-        function changeMember() {
-            var select = document.getElementById('memberSelect');
-            if (select) {
-                selectedMemberIndex = parseInt(select.value);
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-
-        // 카드 뷰만 업데이트 (뷰 변경 없이)
-        function updateCardViewOnly() {
-            // 현재 선택된 멤버 이름 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-
-            // 카드뷰 부분만 업데이트
-            var mobileView = document.querySelector('.mobile-view');
-            if (mobileView && currentView === 'card') {
-                // 현재 데이터로 카드뷰 내용만 다시 생성
-                fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
-                    var memberEntries = Object.keys(data.members || data);
-                    memberEntries.sort(function(a, b) {
-                        var dataObj = data.members || data;
-                        var orderA = dataObj[a].order || 0;
-                        var orderB = dataObj[b].order || 0;
-                        return orderA - orderB;
-                    });
-
-                    var finalDates = data.dates || [];
-                    if (finalDates.length === 0 && memberEntries.length > 0) {
-                        finalDates = Object.keys((data.members || data)[memberEntries[0]].attendance || {}).sort();
-                    }
-
-                    var cardViewHTML = generateCardView(data.members || data, memberEntries, finalDates, currentYear, currentMonth);
-                    mobileView.innerHTML = cardViewHTML;
-                })
-                .catch(function(error) {
-                    console.error('카드뷰 업데이트 오류:', error);
-                });
-            }
-        }
-
-        // 카드 뷰만 업데이트 (전체 테이블 다시 로드하지 않음)
-        function updateCardView() {
-            // 현재 선택된 멤버 이름 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-
-            // 선택된 멤버를 유지하면서 출석 테이블 업데이트
-            loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
-        }
-
-        // 뷰 전환 함수들
-        function switchToCardView() {
-            var desktopView = document.querySelector('.desktop-view');
-            var mobileView = document.querySelector('.mobile-view');
-            var cardBtn = document.getElementById('cardViewBtn');
-            var tableBtn = document.getElementById('tableViewBtn');
-
-            if (desktopView) {
-                desktopView.style.display = 'none';
-                desktopView.classList.add('inactive');
-            }
-            if (mobileView) {
-                mobileView.style.display = 'block';
-                mobileView.classList.add('active');
-            }
-            if (cardBtn) cardBtn.classList.add('active');
-            if (tableBtn) tableBtn.classList.remove('active');
-
-            currentView = 'card';
-            userSelectedView = 'card'; // 사용자가 직접 선택했음을 기록
-
-            // 카드 뷰로 전환 시 첫 번째 멤버 선택 (인덱스가 범위를 벗어나는 경우만)
-            if (selectedMemberIndex < 0 || selectedMemberIndex >= memberList.length) {
-                selectedMemberIndex = 0;
-            }
-        }
-
-        function switchToTableView() {
-            var desktopView = document.querySelector('.desktop-view');
-            var mobileView = document.querySelector('.mobile-view');
-            var cardBtn = document.getElementById('cardViewBtn');
-            var tableBtn = document.getElementById('tableViewBtn');
-
-            if (desktopView) {
-                desktopView.style.display = 'block';
-                desktopView.classList.remove('inactive');
-            }
-            if (mobileView) {
-                mobileView.style.display = 'none';
-                mobileView.classList.remove('active');
-            }
-            if (tableBtn) tableBtn.classList.add('active');
-            if (cardBtn) cardBtn.classList.remove('active');
-
-            currentView = 'table';
-            userSelectedView = 'table'; // 사용자가 직접 선택했음을 기록
-        }
-
-        // 출석 토글
-        function toggleAttendance(name, date, cell) {
-            var currentStatus = cell.classList.contains('present') ? 1 : 0;
-            var newStatus = currentStatus === 1 ? 0 : 1;
-
-            fetch('/api/attendance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: name,
-                    date: date,
-                    status: newStatus
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    // 즉시 셀 상태 업데이트
-                    cell.classList.remove('present', 'absent');
-                    cell.classList.add(newStatus === 1 ? 'present' : 'absent');
-
-                    // 텍스트 업데이트
-                    var valueElement = cell.querySelector('.attendance-value-mobile');
-                    if (valueElement) {
-                        valueElement.textContent = newStatus === 1 ? '출석' : '불참';
-                    } else {
-                        cell.textContent = newStatus === 1 ? '1' : '0';
-                    }
-
-                    // 통계 업데이트를 위해 테이블 다시 로드
-                    setTimeout(function() {
-                        loadAttendanceTable();
-                    }, 100);
-                } else {
-                    alert('출석 정보 업데이트에 실패했습니다.');
-                }
-            })
-            .catch(function(error) {
-                alert('네트워크 오류가 발생했습니다: ' + error);
-            });
-        }
-
-        // 메시지 표시
-        function showMessage(message, type, container) {
-            container.innerHTML = '<div class="' + type + '">' + message + '</div>';
-            setTimeout(function() {
-                container.innerHTML = '';
-            }, 5000);
-        }
-
-        // 모달 외부 클릭 시 닫기
-        window.onclick = function(event) {
-            var modal = document.getElementById('roleModal');
-            if (event.target === modal) {
-                closeRoleModal();
-            }More actions
-        };
-    </script>
-</body>
-</html>
