@@ -2,6 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const { Octokit } = require('@octokit/rest');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,7 +11,13 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-const DATA_FILE = 'attendance_data.json';
+// GitHub 설정 (환경변수로 설정 필요)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_OWNER = process.env.GITHUB_OWNER; // GitHub 사용자명 또는 조직명
+const GITHUB_REPO = process.env.GITHUB_REPO;   // 레포지토리 이름
+const DATA_FILE_PATH = 'data/attendance_data.json'; // 레포지토리 내 데이터 파일 경로
+
+const LOCAL_DATA_FILE = 'attendance_data.json';
 const BACKUP_DIR = 'backups';
 
 const ROLE_REQUIREMENTS = {
@@ -19,38 +27,170 @@ const ROLE_REQUIREMENTS = {
   '포토': { total: 1, wednesday: 0 }
 };
 
+// GitHub API 초기화
+let octokit = null;
+if (GITHUB_TOKEN) {
+  octokit = new Octokit({
+    auth: GITHUB_TOKEN,
+  });
+}
+
 // 백업 디렉토리 생성
 if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR);
 }
 
-class AttendanceSystem {
+class GitHubAttendanceSystem {
   constructor() {
-    this.data = this.loadData();
+    this.data = {};
+    this.lastSha = null; // GitHub 파일의 마지막 SHA
+    this.isInitialized = false;
+    this.initializeData();
   }
 
-  loadData() {
+  async initializeData() {
     try {
-      if (fs.existsSync(DATA_FILE)) {
-        const rawData = fs.readFileSync(DATA_FILE, 'utf8');
-        return JSON.parse(rawData);
+      console.log('데이터 초기화 시작...');
+      
+      // GitHub에서 데이터 로드 시도
+      if (await this.loadFromGitHub()) {
+        console.log('GitHub에서 데이터를 성공적으로 로드했습니다.');
+      } else {
+        console.log('GitHub 로드 실패, 로컬 파일에서 로드 시도...');
+        // GitHub 로드 실패 시 로컬 파일에서 로드
+        this.loadFromLocal();
+      }
+      
+      this.isInitialized = true;
+      console.log('데이터 초기화 완료');
+    } catch (error) {
+      console.error('데이터 초기화 오류:', error);
+      this.data = {};
+      this.isInitialized = true;
+    }
+  }
+
+  async waitForInitialization() {
+    while (!this.isInitialized) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  // GitHub에서 데이터 로드
+  async loadFromGitHub() {
+    if (!octokit || !GITHUB_OWNER || !GITHUB_REPO) {
+      console.log('GitHub 설정이 없습니다. 로컬 모드로 실행합니다.');
+      return false;
+    }
+
+    try {
+      console.log(`GitHub에서 데이터 로드 중: ${GITHUB_OWNER}/${GITHUB_REPO}/${DATA_FILE_PATH}`);
+      
+      const response = await octokit.rest.repos.getContent({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        path: DATA_FILE_PATH,
+      });
+
+      if (response.data.content) {
+        const content = Buffer.from(response.data.content, 'base64').toString('utf8');
+        this.data = JSON.parse(content);
+        this.lastSha = response.data.sha;
+        
+        // 로컬에도 백업 저장
+        this.saveToLocal();
+        
+        console.log('GitHub에서 데이터 로드 성공');
+        return true;
       }
     } catch (error) {
-      console.error('데이터 로드 오류:', error);
+      if (error.status === 404) {
+        console.log('GitHub에 데이터 파일이 없습니다. 새로 생성합니다.');
+        this.data = {};
+        await this.saveToGitHub('초기 데이터 파일 생성');
+        return true;
+      } else {
+        console.error('GitHub 로드 오류:', error.message);
+        return false;
+      }
     }
-    return {};
+    return false;
   }
 
-  saveData() {
+  // 로컬 파일에서 데이터 로드
+  loadFromLocal() {
     try {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf8');
+      if (fs.existsSync(LOCAL_DATA_FILE)) {
+        const rawData = fs.readFileSync(LOCAL_DATA_FILE, 'utf8');
+        this.data = JSON.parse(rawData);
+        console.log('로컬 파일에서 데이터 로드 성공');
+      } else {
+        console.log('로컬 데이터 파일이 없습니다. 빈 데이터로 시작합니다.');
+        this.data = {};
+      }
     } catch (error) {
-      console.error('데이터 저장 오류:', error);
+      console.error('로컬 데이터 로드 오류:', error);
+      this.data = {};
     }
   }
 
-  // 자동 백업 (매일 실행)
-  createAutoBackup() {
+  // 로컬 파일에 저장
+  saveToLocal() {
+    try {
+      fs.writeFileSync(LOCAL_DATA_FILE, JSON.stringify(this.data, null, 2), 'utf8');
+    } catch (error) {
+      console.error('로컬 데이터 저장 오류:', error);
+    }
+  }
+
+  // GitHub에 저장
+  async saveToGitHub(commitMessage = '출석 데이터 업데이트') {
+    if (!octokit || !GITHUB_OWNER || !GITHUB_REPO) {
+      console.log('GitHub 설정이 없어 로컬에만 저장합니다.');
+      this.saveToLocal();
+      return false;
+    }
+
+    try {
+      const content = JSON.stringify(this.data, null, 2);
+      const contentBase64 = Buffer.from(content).toString('base64');
+
+      const payload = {
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        path: DATA_FILE_PATH,
+        message: `${commitMessage} - ${new Date().toLocaleString('ko-KR')}`,
+        content: contentBase64,
+      };
+
+      // 기존 파일이 있으면 SHA 추가
+      if (this.lastSha) {
+        payload.sha = this.lastSha;
+      }
+
+      console.log('GitHub에 데이터 저장 중...');
+      const response = await octokit.rest.repos.createOrUpdateFileContents(payload);
+      
+      this.lastSha = response.data.content.sha;
+      this.saveToLocal(); // 로컬에도 백업
+      
+      console.log('GitHub 저장 성공:', response.data.commit.html_url);
+      return true;
+    } catch (error) {
+      console.error('GitHub 저장 오류:', error.message);
+      // GitHub 저장 실패 시 로컬에라도 저장
+      this.saveToLocal();
+      return false;
+    }
+  }
+
+  // 데이터 저장 (GitHub + 로컬)
+  async saveData(commitMessage = '출석 데이터 업데이트') {
+    await this.saveToGitHub(commitMessage);
+  }
+
+  // 자동 백업 생성
+  async createAutoBackup() {
     try {
       const now = new Date();
       const dateStr = now.getFullYear() + '-' + 
@@ -69,6 +209,26 @@ class AttendanceSystem {
       fs.writeFileSync(backupFileName, JSON.stringify(backupData, null, 2), 'utf8');
       console.log('자동 백업 생성:', backupFileName);
       
+      // GitHub에도 백업 저장
+      if (octokit) {
+        try {
+          const content = JSON.stringify(backupData, null, 2);
+          const contentBase64 = Buffer.from(content).toString('base64');
+          
+          await octokit.rest.repos.createOrUpdateFileContents({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: `backups/backup_${dateStr}_${timeStr}.json`,
+            message: `자동 백업 - ${now.toLocaleString('ko-KR')}`,
+            content: contentBase64,
+          });
+          
+          console.log('GitHub 백업 저장 완료');
+        } catch (error) {
+          console.error('GitHub 백업 저장 오류:', error.message);
+        }
+      }
+      
       // 30일 이상된 백업 파일 정리
       this.cleanOldBackups();
       
@@ -80,7 +240,7 @@ class AttendanceSystem {
   }
 
   // 수동 백업 생성
-  createManualBackup(description = '') {
+  async createManualBackup(description = '') {
     try {
       const now = new Date();
       const dateStr = now.getFullYear() + '-' + 
@@ -101,6 +261,26 @@ class AttendanceSystem {
       
       fs.writeFileSync(backupFileName, JSON.stringify(backupData, null, 2), 'utf8');
       console.log('수동 백업 생성:', backupFileName);
+      
+      // GitHub에도 백업 저장
+      if (octokit) {
+        try {
+          const content = JSON.stringify(backupData, null, 2);
+          const contentBase64 = Buffer.from(content).toString('base64');
+          
+          await octokit.rest.repos.createOrUpdateFileContents({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: `backups/manual_backup_${dateStr}_${timeStr}${suffix}.json`,
+            message: `수동 백업${description ? ': ' + description : ''} - ${now.toLocaleString('ko-KR')}`,
+            content: contentBase64,
+          });
+          
+          console.log('GitHub 수동 백업 저장 완료');
+        } catch (error) {
+          console.error('GitHub 수동 백업 저장 오류:', error.message);
+        }
+      }
       
       return backupFileName;
     } catch (error) {
@@ -176,7 +356,7 @@ class AttendanceSystem {
   }
 
   // 백업에서 복원
-  restoreFromBackup(filename) {
+  async restoreFromBackup(filename) {
     try {
       const filePath = path.join(BACKUP_DIR, filename);
       
@@ -188,11 +368,11 @@ class AttendanceSystem {
       const backupData = JSON.parse(content);
       
       // 복원 전 현재 데이터 백업
-      this.createManualBackup('복원_전_백업');
+      await this.createManualBackup('복원_전_백업');
       
       // 데이터 복원
       this.data = backupData.data || {};
-      this.saveData();
+      await this.saveData('백업에서 데이터 복원');
       
       return { success: true, message: '데이터가 성공적으로 복원되었습니다.' };
     } catch (error) {
@@ -205,17 +385,17 @@ class AttendanceSystem {
     return year + '-' + (month < 10 ? '0' + month : month);
   }
 
-  initializeMonth(year, month) {
+  async initializeMonth(year, month) {
     const monthKey = this.getMonthKey(year, month);
     if (!this.data[monthKey]) {
       this.data[monthKey] = {};
-      this.saveData();
+      await this.saveData(`${year}년 ${month}월 초기화`);
     }
   }
 
-  addMember(year, month, name, role) {
+  async addMember(year, month, name, role) {
     const monthKey = this.getMonthKey(year, month);
-    this.initializeMonth(year, month);
+    await this.initializeMonth(year, month);
     
     if (!this.data[monthKey][name]) {
       this.data[monthKey][name] = {
@@ -223,33 +403,33 @@ class AttendanceSystem {
         attendance: {},
         order: Object.keys(this.data[monthKey]).length
       };
-      this.saveData();
+      await this.saveData(`멤버 추가: ${name} (${role})`);
       return true;
     }
     return false;
   }
 
-  deleteMember(year, month, name) {
+  async deleteMember(year, month, name) {
     const monthKey = this.getMonthKey(year, month);
     if (this.data[monthKey] && this.data[monthKey][name]) {
       delete this.data[monthKey][name];
-      this.saveData();
+      await this.saveData(`멤버 삭제: ${name}`);
       return true;
     }
     return false;
   }
 
-  updateMemberRole(year, month, name, newRole) {
+  async updateMemberRole(year, month, name, newRole) {
     const monthKey = this.getMonthKey(year, month);
     if (this.data[monthKey] && this.data[monthKey][name]) {
       this.data[monthKey][name].role = newRole;
-      this.saveData();
+      await this.saveData(`${name} 역할 변경: ${newRole}`);
       return true;
     }
     return false;
   }
 
-  updateMemberOrder(year, month, memberOrders) {
+  async updateMemberOrder(year, month, memberOrders) {
     const monthKey = this.getMonthKey(year, month);
     if (this.data[monthKey]) {
       for (let i = 0; i < memberOrders.length; i++) {
@@ -258,13 +438,13 @@ class AttendanceSystem {
           this.data[monthKey][memberOrder.name].order = memberOrder.order;
         }
       }
-      this.saveData();
+      await this.saveData('멤버 순서 변경');
       return true;
     }
     return false;
   }
 
-  copyFromPreviousMonth(year, month) {
+  async copyFromPreviousMonth(year, month) {
     const currentMonthKey = this.getMonthKey(year, month);
     let prevYear = year;
     let prevMonth = month - 1;
@@ -290,17 +470,17 @@ class AttendanceSystem {
         };
       }
       
-      this.saveData();
+      await this.saveData(`${prevYear}년 ${prevMonth}월 멤버 복사`);
       return true;
     }
     return false;
   }
 
-  updateAttendance(year, month, name, date, status) {
+  async updateAttendance(year, month, name, date, status) {
     const monthKey = this.getMonthKey(year, month);
     if (this.data[monthKey] && this.data[monthKey][name]) {
       this.data[monthKey][name].attendance[date] = parseInt(status);
-      this.saveData();
+      await this.saveData(`${name} 출석 업데이트 (${date})`);
       return true;
     }
     return false;
@@ -377,12 +557,12 @@ class AttendanceSystem {
   }
 
   // 월 데이터 import (덮어쓰기)
-  importMonthData(year, month, importData) {
+  async importMonthData(year, month, importData) {
     try {
       const monthKey = this.getMonthKey(year, month);
       
       // 백업 생성 (덮어쓰기 전)
-      this.createManualBackup(`import_전_백업_${year}_${month}`);
+      await this.createManualBackup(`import_전_백업_${year}_${month}`);
       
       // 기존 데이터 삭제
       delete this.data[monthKey];
@@ -405,7 +585,7 @@ class AttendanceSystem {
         }
       }
       
-      this.saveData();
+      await this.saveData(`${year}년 ${month}월 데이터 가져오기`);
       return { success: true, message: '데이터를 성공적으로 가져왔습니다.' };
     } catch (error) {
       console.error('월 데이터 import 오류:', error);
@@ -464,7 +644,7 @@ class AttendanceSystem {
   }
 }
 
-const attendanceSystem = new AttendanceSystem();
+const attendanceSystem = new GitHubAttendanceSystem();
 
 // 매일 자동 백업 실행 (매일 오전 2시)
 const scheduleAutoBackup = () => {
@@ -475,12 +655,12 @@ const scheduleAutoBackup = () => {
   
   const timeUntilBackup = tomorrow.getTime() - now.getTime();
   
-  setTimeout(() => {
-    attendanceSystem.createAutoBackup();
+  setTimeout(async () => {
+    await attendanceSystem.createAutoBackup();
     
     // 24시간마다 반복
-    setInterval(() => {
-      attendanceSystem.createAutoBackup();
+    setInterval(async () => {
+      await attendanceSystem.createAutoBackup();
     }, 24 * 60 * 60 * 1000);
   }, timeUntilBackup);
   
@@ -500,15 +680,22 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    github_connected: !!octokit,
+    data_initialized: attendanceSystem.isInitialized
+  });
 });
 
 // =============================================================================
-// 기존 API 엔드포인트들
+// 기존 API 엔드포인트들 (async/await 적용)
 // =============================================================================
 
-app.get('/api/members/:year/:month', (req, res) => {
+app.get('/api/members/:year/:month', async (req, res) => {
   try {
+    await attendanceSystem.waitForInitialization();
+    
     const year = parseInt(req.params.year);
     const month = parseInt(req.params.month);
     
@@ -524,15 +711,17 @@ app.get('/api/members/:year/:month', (req, res) => {
   }
 });
 
-app.post('/api/add_member', (req, res) => {
+app.post('/api/add_member', async (req, res) => {
   try {
+    await attendanceSystem.waitForInitialization();
+    
     const { year, month, name, role } = req.body;
     
     if (!year || !month || !name || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    if (attendanceSystem.addMember(year, month, name, role)) {
+    if (await attendanceSystem.addMember(year, month, name, role)) {
       res.json({ success: true });
     } else {
       res.status(400).json({ error: 'Member already exists' });
@@ -543,13 +732,15 @@ app.post('/api/add_member', (req, res) => {
   }
 });
 
-app.delete('/api/member/:year/:month/:name', (req, res) => {
+app.delete('/api/member/:year/:month/:name', async (req, res) => {
   try {
+    await attendanceSystem.waitForInitialization();
+    
     const year = parseInt(req.params.year);
     const month = parseInt(req.params.month);
     const name = decodeURIComponent(req.params.name);
     
-    if (attendanceSystem.deleteMember(year, month, name)) {
+    if (await attendanceSystem.deleteMember(year, month, name)) {
       res.json({ success: true });
     } else {
       res.status(400).json({ error: 'Failed to delete member' });
@@ -560,307 +751,20 @@ app.delete('/api/member/:year/:month/:name', (req, res) => {
   }
 });
 
-app.put('/api/member_role', (req, res) => {
+app.put('/api/member_role', async (req, res) => {
   try {
+    await attendanceSystem.waitForInitialization();
+    
     const { year, month, name, role } = req.body;
     
     if (!year || !month || !name || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    if (attendanceSystem.updateMemberRole(year, month, name, role)) {
+    if (await attendanceSystem.updateMemberRole(year, month, name, role)) {
       res.json({ success: true });
     } else {
       res.status(400).json({ error: 'Failed to update member role' });
     }
   } catch (error) {
     console.error('Error in /api/member_role:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.put('/api/member_orders', (req, res) => {
-  try {
-    const { year, month, orders } = req.body;
-    
-    if (!year || !month || !orders || !Array.isArray(orders)) {
-      return res.status(400).json({ error: 'Missing required fields or invalid orders' });
-    }
-    
-    if (attendanceSystem.updateMemberOrder(year, month, orders)) {
-      res.json({ success: true });
-    } else {
-      res.status(400).json({ error: 'Failed to update member orders' });
-    }
-  } catch (error) {
-    console.error('Error in /api/member_orders:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/api/copy_previous_month', (req, res) => {
-  try {
-    const { year, month } = req.body;
-    
-    if (!year || !month) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    if (attendanceSystem.copyFromPreviousMonth(year, month)) {
-      res.json({ success: true });
-    } else {
-      res.status(400).json({ error: 'No previous month data found or failed to copy' });
-    }
-  } catch (error) {
-    console.error('Error in /api/copy_previous_month:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/api/attendance', (req, res) => {
-  try {
-    const { year, month, name, date, status } = req.body;
-    
-    if (!year || !month || !name || !date || status === undefined) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    if (attendanceSystem.updateAttendance(year, month, name, date, status)) {
-      res.json({ success: true });
-    } else {
-      res.status(400).json({ error: 'Failed to update attendance' });
-    }
-  } catch (error) {
-    console.error('Error in /api/attendance:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/monthly_report/:year/:month', (req, res) => {
-  try {
-    const year = parseInt(req.params.year);
-    const month = parseInt(req.params.month);
-    
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return res.status(400).json({ error: 'Invalid year or month' });
-    }
-    
-    const reportData = attendanceSystem.exportMonthData(year, month);
-    res.json(reportData);
-  } catch (error) {
-    console.error('Error in /api/monthly_report:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/dates/:year/:month', (req, res) => {
-  try {
-    const year = parseInt(req.params.year);
-    const month = parseInt(req.params.month);
-    
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return res.status(400).json({ error: 'Invalid year or month' });
-    }
-    
-    const dates = attendanceSystem.getMonthDates(year, month);
-    res.json(dates);
-  } catch (error) {
-    console.error('Error in /api/dates:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// =============================================================================
-// 새로운 Export/Backup API 엔드포인트들
-// =============================================================================
-
-// 전체 데이터 export
-app.get('/api/export/all', (req, res) => {
-  try {
-    const exportData = attendanceSystem.exportAllData();
-    res.json(exportData);
-  } catch (error) {
-    console.error('Error in /api/export/all:', error);
-    res.status(500).json({ error: 'Failed to export data' });
-  }
-});
-
-// 특정 월 데이터 export
-app.get('/api/export/:year/:month', (req, res) => {
-  try {
-    const year = parseInt(req.params.year);
-    const month = parseInt(req.params.month);
-    
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return res.status(400).json({ error: 'Invalid year or month' });
-    }
-    
-    const exportData = attendanceSystem.exportMonthData(year, month);
-    res.json(exportData);
-  } catch (error) {
-    console.error('Error in /api/export:', error);
-    res.status(500).json({ error: 'Failed to export data' });
-  }
-});
-
-// 수동 백업 생성
-app.post('/api/backup/create', (req, res) => {
-  try {
-    const { description } = req.body;
-    const backupFile = attendanceSystem.createManualBackup(description || '');
-    
-    if (backupFile) {
-      res.json({ 
-        success: true, 
-        filename: path.basename(backupFile),
-        message: '백업이 성공적으로 생성되었습니다.' 
-      });
-    } else {
-      res.status(500).json({ 
-        success: false, 
-        error: '백업 생성에 실패했습니다.' 
-      });
-    }
-  } catch (error) {
-    console.error('Error in /api/backup/create:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error' 
-    });
-  }
-});
-
-// 백업 목록 조회
-app.get('/api/backup/list', (req, res) => {
-  try {
-    const backups = attendanceSystem.getBackupList();
-    res.json({ success: true, backups: backups });
-  } catch (error) {
-    console.error('Error in /api/backup/list:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get backup list' 
-    });
-  }
-});
-
-// 백업에서 복원
-app.post('/api/backup/restore', (req, res) => {
-  try {
-    const { filename } = req.body;
-    
-    if (!filename) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Filename is required' 
-      });
-    }
-    
-    const result = attendanceSystem.restoreFromBackup(filename);
-    res.json(result);
-  } catch (error) {
-    console.error('Error in /api/backup/restore:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error' 
-    });
-  }
-});
-
-// 백업 파일 다운로드
-app.get('/api/backup/download/:filename', (req, res) => {
-  try {
-    const filename = req.params.filename;
-    const filePath = path.join(BACKUP_DIR, filename);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Backup file not found' });
-    }
-    
-    res.download(filePath, filename, (err) => {
-      if (err) {
-        console.error('Error downloading backup:', err);
-        res.status(500).json({ error: 'Failed to download backup' });
-      }
-    });
-  } catch (error) {
-    console.error('Error in /api/backup/download:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// 백업 파일 삭제
-app.delete('/api/backup/:filename', (req, res) => {
-  try {
-    const filename = req.params.filename;
-    const filePath = path.join(BACKUP_DIR, filename);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Backup file not found' 
-      });
-    }
-    
-    // 자동 백업 파일만 삭제 가능 (수동 백업은 보호)
-    if (!filename.startsWith('backup_')) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Cannot delete manual backup files' 
-      });
-    }
-    
-    fs.unlinkSync(filePath);
-    res.json({ 
-      success: true, 
-      message: 'Backup file deleted successfully' 
-    });
-  } catch (error) {
-    console.error('Error in DELETE /api/backup:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error' 
-    });
-  }
-});
-
-// 월 데이터 import
-app.post('/api/import_month_data', (req, res) => {
-  try {
-    const { year, month, data } = req.body;
-    
-    if (!year || !month || !data) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields' 
-      });
-    }
-    
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid year or month' 
-      });
-    }
-    
-    const result = attendanceSystem.importMonthData(year, month, data);
-    res.json(result);
-  } catch (error) {
-    console.error('Error in /api/import_month_data:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error' 
-    });
-  }
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-
-app.listen(PORT, () => {
-  console.log(`출석 시스템이 포트 ${PORT}에서 실행 중입니다.`);
-  console.log(`환경: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`데이터 파일: ${DATA_FILE}`);
-  console.log(`백업 디렉토리: ${BACKUP_DIR}`);
-});
