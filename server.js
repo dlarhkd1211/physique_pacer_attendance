@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { Octokit } = require('@octokit/rest');
-const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -689,7 +688,7 @@ app.get('/health', (req, res) => {
 });
 
 // =============================================================================
-// 기존 API 엔드포인트들 (async/await 적용)
+// API 엔드포인트들
 // =============================================================================
 
 app.get('/api/members/:year/:month', async (req, res) => {
@@ -768,3 +767,18 @@ app.put('/api/member_role', async (req, res) => {
     }
   } catch (error) {
     console.error('Error in /api/member_role:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/member_orders', async (req, res) => {
+  try {
+    await attendanceSystem.waitForInitialization();
+    
+    const { year, month, orders } = req.body;
+    
+    if (!year || !month || !orders || !Array.isArray(orders)) {
+      return res.status(400).json({ error: 'Missing required fields or invalid orders' });
+    }
+    
+    if (await attendanceSystem.updateMemberOrder(year, month, orders)) {
