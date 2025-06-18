@@ -1674,10 +1674,18 @@
                 }
             }
             
-            // 기타 점수 추가
+            // 기타 점수 추가 - extras와 attendance 둘 다 확인
+            var extraTotal = 0;
             if (extras) {
-                total += (extras.extra1 || 0) + (extras.extra2 || 0) + (extras.extra3 || 0);
+                extraTotal += (extras.extra1 || 0) + (extras.extra2 || 0) + (extras.extra3 || 0);
             }
+            
+            // attendance 객체에서도 기타 점수 확인 (서버 구조에 따라)
+            if (!extraTotal) {
+                extraTotal += (attendance.extra1 || 0) + (attendance.extra2 || 0) + (attendance.extra3 || 0);
+            }
+            
+            total += extraTotal;
             
             // 조건 충족 여부 계산
             var requirements = {
@@ -2377,7 +2385,19 @@
                     html += '</td>';
                 }
                 
-                // 기타 칼럼 추가
+                // 기타 칼럼 추가 - extras 데이터 확인 및 기본값 처리
+                var extras = info.extras || {};
+                
+                // 서버에서 기타 데이터가 없는 경우 출석 데이터에서 찾기 시도
+                if (!extras.extra1 && !extras.extra2 && !extras.extra3) {
+                    var attendance = info.attendance || {};
+                    extras = {
+                        extra1: attendance.extra1 || 0,
+                        extra2: attendance.extra2 || 0, 
+                        extra3: attendance.extra3 || 0
+                    };
+                }
+                
                 var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
                 var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
                 var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
@@ -2485,7 +2505,19 @@
                         html += '</div>';
                     }
                     
-                    // 기타 항목들 추가
+                    // 기타 항목들 추가 - extras 데이터 확인 및 기본값 처리
+                    var extras = info.extras || {};
+                    
+                    // 서버에서 기타 데이터가 없는 경우 출석 데이터에서 찾기 시도
+                    if (!extras.extra1 && !extras.extra2 && !extras.extra3) {
+                        var attendance = info.attendance || {};
+                        extras = {
+                            extra1: attendance.extra1 || 0,
+                            extra2: attendance.extra2 || 0, 
+                            extra3: attendance.extra3 || 0
+                        };
+                    }
+                    
                     var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
                     var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
                     var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
@@ -2553,20 +2585,18 @@
             })
             .then(function(data) {
                 if (data.success) {
-                    // 즉시 셀 상태 및 값 업데이트
-                    var parentCell = element.closest ? element.closest('.attendance-cell, .attendance-item-mobile') : element.parentNode;
-                    if (parentCell) {
-                        parentCell.classList.remove('present', 'absent');
-                        parentCell.classList.add(newValue === 1 ? 'present' : 'absent');
+                    // 현재 선택된 멤버 이름 저장 (카드뷰 상태 유지용)
+                    var currentSelectedMemberName = null;
+                    if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                        currentSelectedMemberName = memberList[selectedMemberIndex];
                     }
                     
-                    // 텍스트 업데이트
-                    element.textContent = newValue;
-                    
-                    // 통계 업데이트를 위해 테이블 다시 로드
-                    setTimeout(function() {
+                    // 전체 테이블 새로고침하여 서버에서 최신 데이터 가져오기
+                    if (currentSelectedMemberName) {
+                        loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
+                    } else {
                         loadAttendanceTable();
-                    }, 100);
+                    }
                 } else {
                     alert('기타 점수 업데이트에 실패했습니다.');
                 }
