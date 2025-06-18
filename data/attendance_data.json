@@ -208,7 +208,10 @@
       "attendance": {
         "2025-06-16": 1
       },
-      "order": 8
+      "order": 8,
+      "extraAttendance": {
+        "extra1": 1
+      }
     }
   },
   "2025-07": {}
