@@ -358,27 +358,30 @@ class GitHubAttendanceSystem {
     for (let i = 1; i <= 3; i++) {
       if (extraAttendance['extra' + i] === 1) {
         extraCount++;
-        totalAttendance++; // 전체 출석에도 포함
+        // 기타 참여는 별도 카운트만 하고, 전체 출석에는 포함하지 않음
         if (i === 1) extra1 = 1;
         if (i === 2) extra2 = 1;
         if (i === 3) extra3 = 1;
       }
     }
     
+    // 전체 출석 = 정규 출석 + 기타 참여
     const requirements = ROLE_REQUIREMENTS[role] || { total: 0, wednesday: 0 };
     let meetsRequirement = true;
     
     if (role !== '운영진') {
-      if (totalAttendance < requirements.total) {
+      // 기타 참여 포함한 전체 출석으로 조건 확인
+      if (totalWithExtra < requirements.total) {
         meetsRequirement = false;
       }
       if (wednesdayAttendance < requirements.wednesday) {
         meetsRequirement = false;
       }
     }
-    
+        
     return {
-      total: totalAttendance,
+      total: totalWithExtra, // 기타 참여 포함한 전체
+      regular: totalAttendance, // 정규 출석만
       wednesday: wednesdayAttendance,
       extra: extraCount,
       extra1: extra1,
