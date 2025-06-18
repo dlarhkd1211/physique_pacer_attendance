@@ -2406,7 +2406,7 @@
                     html += '</td>';
                 }
                 
-                // 기타 칼럼 추가 - 출석 데이터에서 기타 값 추출
+                // 기타 칼럼 추가 - 일반 출석과 동일한 형식으로 생성
                 var attendance = info.attendance || {};
                 var extras = {
                     extra1: attendance.extra1 || 0,
@@ -2425,13 +2425,14 @@
                 var extra2Class = (extras.extra2 == 1) ? 'present' : 'absent';
                 var extra3Class = (extras.extra3 == 1) ? 'present' : 'absent';
                 
-                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경" data-value="' + extras.extra1 + '">';
+                // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
+                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
                 html += extras.extra1;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경" data-value="' + extras.extra2 + '">';
+                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
                 html += extras.extra2;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경" data-value="' + extras.extra3 + '">';
+                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
                 html += extras.extra3;
                 html += '</td>';
                 
@@ -2528,7 +2529,7 @@
                         html += '</div>';
                     }
                     
-                    // 기타 항목들 추가 - 출석 데이터에서 기타 값 추출
+                    // 기타 항목들 추가 - 일반 출석과 동일한 형식으로 생성
                     var attendance = info.attendance || {};
                     var extras = {
                         extra1: attendance.extra1 || 0,
@@ -2547,17 +2548,18 @@
                     var extra2Class = (extras.extra2 == 1) ? 'present' : 'absent';
                     var extra3Class = (extras.extra3 == 1) ? 'present' : 'absent';
                     
-                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경" data-value="' + extras.extra1 + '">';
+                    // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
+                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타1</div>';
                     html += '<div class="attendance-value-mobile">' + extras.extra1 + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경" data-value="' + extras.extra2 + '">';
+                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타2</div>';
                     html += '<div class="attendance-value-mobile">' + extras.extra2 + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경" data-value="' + extras.extra3 + '">';
+                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타3</div>';
                     html += '<div class="attendance-value-mobile">' + extras.extra3 + '</div>';
                     html += '</div>';
