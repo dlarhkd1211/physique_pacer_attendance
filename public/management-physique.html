@@ -2385,31 +2385,33 @@
                     html += '</td>';
                 }
                 
-                // 기타 칼럼 추가 - extras 데이터 확인 및 기본값 처리
-                var extras = info.extras || {};
+                // 기타 칼럼 추가 - 출석 데이터에서 기타 값 추출
+                var attendance = info.attendance || {};
+                var extras = {
+                    extra1: attendance.extra1 || 0,
+                    extra2: attendance.extra2 || 0, 
+                    extra3: attendance.extra3 || 0
+                };
                 
-                // 서버에서 기타 데이터가 없는 경우 출석 데이터에서 찾기 시도
-                if (!extras.extra1 && !extras.extra2 && !extras.extra3) {
-                    var attendance = info.attendance || {};
-                    extras = {
-                        extra1: attendance.extra1 || 0,
-                        extra2: attendance.extra2 || 0, 
-                        extra3: attendance.extra3 || 0
-                    };
+                // info.extras가 있으면 우선 사용
+                if (info.extras) {
+                    extras.extra1 = info.extras.extra1 || extras.extra1;
+                    extras.extra2 = info.extras.extra2 || extras.extra2;
+                    extras.extra3 = info.extras.extra3 || extras.extra3;
                 }
                 
-                var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
-                var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
-                var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
+                var extra1Class = (extras.extra1 == 1) ? 'present' : 'absent';
+                var extra2Class = (extras.extra2 == 1) ? 'present' : 'absent';
+                var extra3Class = (extras.extra3 == 1) ? 'present' : 'absent';
                 
-                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
-                html += (extras.extra1 || 0);
+                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경" data-value="' + extras.extra1 + '">';
+                html += extras.extra1;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
-                html += (extras.extra2 || 0);
+                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경" data-value="' + extras.extra2 + '">';
+                html += extras.extra2;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
-                html += (extras.extra3 || 0);
+                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경" data-value="' + extras.extra3 + '">';
+                html += extras.extra3;
                 html += '</td>';
                 
                 html += '</tr>';
