@@ -2297,7 +2297,7 @@
             html += '<div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0;">';
             html += '<p style="margin: 5px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 기타 셀을 클릭하면 숫자를 입력할 수 있습니다</p>';
+            html += '<p style="margin: 5px 0; color: #1565c0;">• 기타 셀을 클릭하면 0/1이 토글됩니다</p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>';
             if (isMobile()) {
@@ -2378,13 +2378,17 @@
                 }
                 
                 // 기타 칼럼 추가
-                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
+                var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
+                var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
+                
+                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
                 html += (extras.extra1 || 0);
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
                 html += (extras.extra2 || 0);
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
                 html += (extras.extra3 || 0);
                 html += '</td>';
                 
@@ -2482,17 +2486,21 @@
                     }
                     
                     // 기타 항목들 추가
-                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                    var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
+                    var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
+                    var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
+                    
+                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타1</div>';
                     html += '<div class="attendance-value-mobile">' + (extras.extra1 || 0) + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타2</div>';
                     html += '<div class="attendance-value-mobile">' + (extras.extra2 || 0) + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
                     html += '<div class="date-label-mobile">기타3</div>';
                     html += '<div class="attendance-value-mobile">' + (extras.extra3 || 0) + '</div>';
                     html += '</div>';
@@ -2508,36 +2516,26 @@
             return html;
         }
         
-        // 기타 점수 편집 (테이블 뷰용)
-        function editExtraValue(name, extraType, cell) {
+        // 기타 점수 토글 (테이블 뷰용) - 0/1 토글
+        function toggleExtraValue(name, extraType, cell) {
             var currentValue = parseInt(cell.textContent) || 0;
-            var newValue = prompt(name + '의 ' + extraType + ' 점수를 입력하세요:', currentValue);
-            
-            if (newValue === null) return; // 취소
-            
-            newValue = parseInt(newValue) || 0;
-            if (newValue < 0) newValue = 0;
+            var newValue = currentValue === 1 ? 0 : 1;
             
             updateExtraValue(name, extraType, newValue, cell);
         }
         
-        // 기타 점수 편집 (모바일 카드 뷰용)
-        function editExtraValueMobile(name, extraType, cell) {
+        // 기타 점수 토글 (모바일 카드 뷰용) - 0/1 토글
+        function toggleExtraValueMobile(name, extraType, cell) {
             var valueElement = cell.querySelector('.attendance-value-mobile');
             var currentValue = parseInt(valueElement.textContent) || 0;
-            var newValue = prompt(name + '의 ' + extraType + ' 점수를 입력하세요:', currentValue);
-            
-            if (newValue === null) return; // 취소
-            
-            newValue = parseInt(newValue) || 0;
-            if (newValue < 0) newValue = 0;
+            var newValue = currentValue === 1 ? 0 : 1;
             
             updateExtraValue(name, extraType, newValue, valueElement);
         }
         
-        // 기타 점수 업데이트 서버 요청
+        // 기타 점수 업데이트 서버 요청 (출석과 동일한 API 사용)
         function updateExtraValue(name, extraType, newValue, element) {
-            fetch('/api/extra_score', {
+            fetch('/api/attendance', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -2546,8 +2544,8 @@
                     year: currentYear,
                     month: currentMonth,
                     name: name,
-                    extra_type: extraType,
-                    value: newValue
+                    date: extraType, // 기타 항목을 date 필드로 전송
+                    status: newValue
                 })
             })
             .then(function(response) {
@@ -2555,7 +2553,14 @@
             })
             .then(function(data) {
                 if (data.success) {
-                    // 즉시 셀 값 업데이트
+                    // 즉시 셀 상태 및 값 업데이트
+                    var parentCell = element.closest ? element.closest('.attendance-cell, .attendance-item-mobile') : element.parentNode;
+                    if (parentCell) {
+                        parentCell.classList.remove('present', 'absent');
+                        parentCell.classList.add(newValue === 1 ? 'present' : 'absent');
+                    }
+                    
+                    // 텍스트 업데이트
                     element.textContent = newValue;
                     
                     // 통계 업데이트를 위해 테이블 다시 로드
