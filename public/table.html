@@ -631,19 +631,19 @@
         }
         
         // 마지막 업데이트 시간 표시
-        function updateLastUpdatedTime() {
-            var now = new Date();
-            var timeString = now.toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
+        // function updateLastUpdatedTime() {
+        //     var now = new Date();
+        //     var timeString = now.toLocaleString('ko-KR', {
+        //         year: 'numeric',
+        //         month: 'long',
+        //         day: 'numeric',
+        //         hour: '2-digit',
+        //         minute: '2-digit',
+        //         second: '2-digit'
+        //     });
             
-            document.getElementById('lastUpdated').innerHTML = '🕒 마지막 업데이트: ' + timeString;
-        }
+        //     document.getElementById('lastUpdated').innerHTML = '🕒 마지막 업데이트: ' + timeString;
+        // }
         
         // 자동 새로고침 (선택사항 - 30초마다)
         setInterval(function() {
