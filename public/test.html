@@ -758,13 +758,12 @@
                     html += `<td class="attendance-cell ${cellClass}" onclick="toggleAttendance('${name}', '${date}', this)" title="${name} - ${date}">${displayText}</td>`;
                 });
                 
-                // 기타 칼럼
+                // 기타 칼럼 - 모든 기타 항목을 동일한 클래스로 처리
                 var attendance = info.attendance || {};
-                var extras = info.extras || {};
                 
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                var extra1 = attendance.extra1 || 0;
+                var extra2 = attendance.extra2 || 0;
+                var extra3 = attendance.extra3 || 0;
                 
                 var extra1Class = (extra1 == 1) ? 'present' : 'absent';
                 var extra2Class = (extra2 == 1) ? 'present' : 'absent';
@@ -931,11 +930,10 @@
                 });
                 
                 var attendance = info.attendance || {};
-                var extras = info.extras || {};
                 
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                var extra1 = attendance.extra1 || 0;
+                var extra2 = attendance.extra2 || 0;
+                var extra3 = attendance.extra3 || 0;
                 
                 row.push(extra1, extra2, extra3);
                 result.push(row);
