@@ -586,6 +586,7 @@
                 for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
                     var date = finalDates[dateIndex];
                     var attendance = info.attendance || {};
+                    var extraAttendance = info.extraAttendance || {};
                     var status = attendance[date] || 0;
                     var cellClass = status === 1 ? 'present' : 'absent';
                     var displayText = status === 1 ? '1' : '0';
