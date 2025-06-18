@@ -157,18 +157,21 @@
         }
         
         /* 테이블 스타일 */
+        /* 고정 칼럼을 위한 테이블 스타일 수정 */
         .table-container {
+            position: relative;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
         
         .attendance-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate; /* collapse에서 separate로 변경 */
             background: white;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-spacing: 0; /* separate 모드에서 간격 제거 */
         }
         
         .attendance-table th {
@@ -179,14 +182,64 @@
             font-weight: 600;
             font-size: 11px;
             min-width: 60px;
+            border-right: 1px solid rgba(255,255,255,0.2); /* 헤더 구분선 */
         }
         
         .attendance-table td {
             padding: 10px 6px;
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
+            border-right: 1px solid #f0f0f0; /* 셀 구분선 */
             font-size: 13px;
             min-width: 60px;
+        }
+
+        /* 고정 칼럼 스타일 */
+        .attendance-table th:nth-child(1),
+        .attendance-table th:nth-child(2),
+        .attendance-table th:nth-child(3),
+        .attendance-table td:nth-child(1),
+        .attendance-table td:nth-child(2),
+        .attendance-table td:nth-child(3) {
+            position: sticky;
+            z-index: 10;
+            background: white;
+            border-right: 2px solid #e0e0e0;
+        }
+        
+        /* 각 고정 칼럼의 위치 설정 */
+        .attendance-table th:nth-child(1),
+        .attendance-table td:nth-child(1) {
+            left: 0;
+            min-width: 80px;
+            z-index: 11;
+        }
+        
+        .attendance-table th:nth-child(2),
+        .attendance-table td:nth-child(2) {
+            left: 80px;
+            min-width: 100px;
+            z-index: 11;
+        }
+        
+        .attendance-table th:nth-child(3),
+        .attendance-table td:nth-child(3) {
+            left: 180px;
+            min-width: 60px;
+            z-index: 11;
+        }
+        
+        /* 헤더의 고정 칼럼은 더 높은 z-index */
+        .attendance-table th:nth-child(1),
+        .attendance-table th:nth-child(2),
+        .attendance-table th:nth-child(3) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 12;
+        }
+        
+        /* 스크롤 가능한 영역의 최소 너비 설정 */
+        .attendance-table {
+            min-width: 800px; /* 필요에 따라 조정 */
         }
         
         .attendance-cell {
