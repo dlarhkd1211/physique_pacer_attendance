@@ -237,9 +237,20 @@
             z-index: 12;
         }
         
+        /* 기타 칼럼 스타일 */
+        .extra-column {
+            background: #fff3cd !important;
+            border: 2px solid #ffc107 !important;
+        }
+        
+        .extra-column-header {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+            color: #212529 !important;
+        }
+        
         /* 스크롤 가능한 영역의 최소 너비 설정 */
         .attendance-table {
-            min-width: 800px; /* 필요에 따라 조정 */
+            min-width: 1000px; /* 기타 칼럼 추가로 인해 늘림 */
         }
         
         .attendance-cell {
@@ -466,6 +477,12 @@
             background: white;
             color: #333;
             border-color: #dee2e6;
+        }
+        
+        .attendance-item-mobile.extra {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+            border-color: #ffc107;
         }
         
         .date-label-mobile {
@@ -952,6 +969,11 @@
                     colWidths.push({ wch: 10 });
                 }
                 
+                // 기타 칼럼들 추가
+                colWidths.push({ wch: 10 }); // 기타1
+                colWidths.push({ wch: 10 }); // 기타2
+                colWidths.push({ wch: 10 }); // 기타3
+                
                 ws['!cols'] = colWidths;
                 
                 XLSX.utils.book_append_sheet(wb, ws, "출석현황");
@@ -965,7 +987,10 @@
                     { wch: 10 }, // 총 출석
                     { wch: 12 }, // 수요일 출석
                     { wch: 10 }, // 조건 충족
-                    { wch: 12 }  // 달성률
+                    { wch: 12 }, // 달성률
+                    { wch: 8 },  // 기타1
+                    { wch: 8 },  // 기타2
+                    { wch: 8 }   // 기타3
                 ];
                 
                 XLSX.utils.book_append_sheet(wb, summaryWs, "요약통계");
@@ -1050,7 +1075,7 @@
             }
         }
         
-        // Excel 데이터 생성
+        // Excel 데이터 생성 (기타 칼럼 포함)
         function generateExcelData(reportData) {
             var data = reportData.members || reportData;
             var dates = reportData.dates || [];
@@ -1075,6 +1100,10 @@
                 var weekday = weekdays[date.getDay()];
                 header.push(month + '/' + day + '(' + weekday + ')');
             }
+            // 기타 칼럼 추가
+            header.push('기타1');
+            header.push('기타2');
+            header.push('기타3');
             result.push(header);
             
             // 데이터 행
@@ -1097,13 +1126,19 @@
                     row.push(status === 1 ? '출석' : '불참');
                 }
                 
+                // 기타 칼럼 데이터 추가
+                var extras = info.extras || {};
+                row.push(extras.extra1 || 0);
+                row.push(extras.extra2 || 0);
+                row.push(extras.extra3 || 0);
+                
                 result.push(row);
             }
             
             return result;
         }
         
-        // 요약 통계 데이터 생성
+        // 요약 통계 데이터 생성 (기타 칼럼 포함)
         function generateSummaryData(reportData) {
             var data = reportData.members || reportData;
             var memberEntries = Object.keys(data);
@@ -1114,7 +1149,7 @@
             });
             
             var result = [];
-            result.push(['이름', '직책', '총 출석', '수요일 출석', '조건 충족', '달성률(%)']);
+            result.push(['이름', '직책', '총 출석', '수요일 출석', '조건 충족', '달성률(%)', '기타1', '기타2', '기타3']);
             
             for (var i = 0; i < memberEntries.length; i++) {
                 var name = memberEntries[i];
@@ -1124,6 +1159,7 @@
                 
                 var stats = info.stats;
                 var role = info.role || '미정';
+                var extras = info.extras || {};
                 
                 // 달성률 계산
                 var achievementRate = 0;
@@ -1137,7 +1173,10 @@
                     stats.total || 0,
                     stats.wednesday || 0,
                     stats.meets_requirement ? '충족' : '미충족',
-                    role === '운영진' ? 'N/A' : achievementRate + '%'
+                    role === '운영진' ? 'N/A' : achievementRate + '%',
+                    extras.extra1 || 0,
+                    extras.extra2 || 0,
+                    extras.extra3 || 0
                 ]);
             }
             
@@ -1167,7 +1206,7 @@
             return '\uFEFF' + csvContent;
         }
         
-        // 요약 보고서 생성
+        // 요약 보고서 생성 (기타 칼럼 포함)
         function generateSummaryReport(reportData) {
             var data = reportData.members || reportData;
             var dates = reportData.dates || [];
@@ -1240,6 +1279,7 @@
                 
                 var stats = info.stats;
                 var role = info.role || '미정';
+                var extras = info.extras || {};
                 
                 report += (i + 1) + '. ' + name + ' (' + role + ')\n';
                 report += '   총 출석: ' + (stats.total || 0) + '회';
@@ -1247,6 +1287,15 @@
                     report += ' (수요일: ' + (stats.wednesday || 0) + '회)';
                 }
                 report += '\n';
+                
+                // 기타 점수 추가
+                if (extras.extra1 || extras.extra2 || extras.extra3) {
+                    report += '   기타 점수: ';
+                    report += '기타1(' + (extras.extra1 || 0) + ') ';
+                    report += '기타2(' + (extras.extra2 || 0) + ') ';
+                    report += '기타3(' + (extras.extra3 || 0) + ')';
+                    report += '\n';
+                }
                 
                 if (role !== '운영진') {
                     report += '   필요 출석: ' + (stats.required_total || 0) + '회';
@@ -1265,6 +1314,7 @@
             report += '• 페이서: 월 3회 이상 출석\n';
             report += '• 페이서 강남: 월 3회 이상 출석 (그 중 수요일 2회 이상)\n';
             report += '• 포토: 월 1회 이상 출석\n';
+            report += '• 기타1, 기타2, 기타3: 추가 점수 (총 합계에 포함)\n';
             report += '\n';
             
             report += '='.repeat(60) + '\n';
@@ -1504,7 +1554,7 @@
             return false;
         }
         
-        // Excel/CSV 데이터를 import 형식으로 변환
+        // Excel/CSV 데이터를 import 형식으로 변환 (기타 칼럼 포함)
         function convertExcelToImportData(data) {
             if (data.length < 2) return null;
             
@@ -1514,10 +1564,19 @@
             // 헤더에서 날짜 추출
             var dates = [];
             var dateStartIndex = 3; // 직책, 성명, 합계 다음부터
+            var extraStartIndex = -1; // 기타 칼럼 시작 인덱스
             
             for (var i = dateStartIndex; i < headers.length; i++) {
                 var header = headers[i];
                 if (header && typeof header === 'string') {
+                    // 기타 칼럼 감지
+                    if (header === '기타1' || header === '기타2' || header === '기타3') {
+                        if (extraStartIndex === -1) {
+                            extraStartIndex = i;
+                        }
+                        break;
+                    }
+                    
                     // 날짜 형식 파싱 (예: "6/1(월)", "2024-06-01" 등)
                     var dateStr = parseDateFromHeader(header);
                     if (dateStr) {
@@ -1553,11 +1612,20 @@
                     attendance[dates[j]] = status;
                 }
                 
+                // 기타 데이터 추출
+                var extras = {};
+                if (extraStartIndex !== -1) {
+                    extras.extra1 = parseInt(row[extraStartIndex]) || 0;
+                    extras.extra2 = parseInt(row[extraStartIndex + 1]) || 0;
+                    extras.extra3 = parseInt(row[extraStartIndex + 2]) || 0;
+                }
+                
                 members[name] = {
                     role: role,
                     order: order++,
                     attendance: attendance,
-                    stats: calculateStatsFromAttendance(attendance, role, dates)
+                    extras: extras,
+                    stats: calculateStatsFromAttendance(attendance, role, dates, extras)
                 };
             }
             
@@ -1589,8 +1657,8 @@
             return null;
         }
         
-        // 출석 데이터에서 통계 계산
-        function calculateStatsFromAttendance(attendance, role, dates) {
+        // 출석 데이터에서 통계 계산 (기타 점수 포함)
+        function calculateStatsFromAttendance(attendance, role, dates, extras) {
             var total = 0;
             var wednesday = 0;
             
@@ -1604,6 +1672,11 @@
                         wednesday++;
                     }
                 }
+            }
+            
+            // 기타 점수 추가
+            if (extras) {
+                total += (extras.extra1 || 0) + (extras.extra2 || 0) + (extras.extra3 || 0);
             }
             
             // 조건 충족 여부 계산
@@ -1653,12 +1726,16 @@
                 var name = memberEntries[i];
                 var member = importData.members[name];
                 var stats = member.stats || {};
+                var extras = member.extras || {};
                 
                 html += '<div style="padding: 5px; border-bottom: 1px solid #eee;">';
                 html += '<strong>' + name + '</strong> (' + (member.role || '미정') + ') - ';
                 html += '출석: ' + (stats.total || 0) + '회';
                 if (member.role === '페이서 강남') {
                     html += ' (수요일: ' + (stats.wednesday || 0) + '회)';
+                }
+                if (extras.extra1 || extras.extra2 || extras.extra3) {
+                    html += ' + 기타(' + (extras.extra1 || 0) + ',' + (extras.extra2 || 0) + ',' + (extras.extra3 || 0) + ')';
                 }
                 html += ' - ' + (stats.meets_requirement ? '✅ 충족' : '❌ 미충족');
                 html += '</div>';
@@ -2154,7 +2231,7 @@
             });
         }
         
-        // 출석 테이블 표시
+        // 출석 테이블 표시 (기타 칼럼 포함)
         function displayAttendanceTable(responseData, year, month) {
             var container = document.getElementById('attendanceTable');
             var data = responseData.members || responseData;
@@ -2215,10 +2292,12 @@
             html += '<li style="padding: 5px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>';
             html += '<li style="padding: 5px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>';
             html += '<li style="padding: 5px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>';
+            html += '<li style="padding: 5px 0;">▶ <strong>기타1, 기타2, 기타3:</strong> 추가 점수 (총 합계에 포함)</li>';
             html += '</ul>';
             html += '<div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0;">';
             html += '<p style="margin: 5px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>';
+            html += '<p style="margin: 5px 0; color: #1565c0;">• 기타 셀을 클릭하면 숫자를 입력할 수 있습니다</p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>';
             html += '<p style="margin: 5px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>';
             if (isMobile()) {
@@ -2235,7 +2314,7 @@
             currentView = viewToUse;
         }
         
-        // 테이블 뷰 생성
+        // 테이블 뷰 생성 (기타 칼럼 포함)
         function generateTableView(data, memberEntries, finalDates, year, month) {
             var isMobile = window.innerWidth <= 768;
             var html = '';
@@ -2261,6 +2340,12 @@
                 var day = dateObj.getDate();
                 html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
             }
+            
+            // 기타 칼럼 헤더 추가
+            html += '<th class="extra-column-header" style="min-width: 60px;">기타1</th>';
+            html += '<th class="extra-column-header" style="min-width: 60px;">기타2</th>';
+            html += '<th class="extra-column-header" style="min-width: 60px;">기타3</th>';
+            
             html += '</tr></thead>';
             
             // 바디
@@ -2272,6 +2357,7 @@
                 if (!info || !info.stats) continue;
                 
                 var stats = info.stats;
+                var extras = info.extras || {};
                 var rowClass = stats.meets_requirement ? 'pass' : 'fail';
                 
                 html += '<tr class="' + rowClass + '">';
@@ -2290,6 +2376,18 @@
                     html += displayText;
                     html += '</td>';
                 }
+                
+                // 기타 칼럼 추가
+                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                html += (extras.extra1 || 0);
+                html += '</td>';
+                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                html += (extras.extra2 || 0);
+                html += '</td>';
+                html += '<td class="attendance-cell extra-column" onclick="editExtraValue(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                html += (extras.extra3 || 0);
+                html += '</td>';
+                
                 html += '</tr>';
             }
             html += '</tbody></table></div>';
@@ -2297,7 +2395,7 @@
             return html;
         }
         
-        // 카드 뷰 생성 - 선택된 멤버만 표시
+        // 카드 뷰 생성 (기타 칼럼 포함) - 선택된 멤버만 표시
         function generateCardView(data, memberEntries, finalDates, year, month) {
             memberList = memberEntries; // 전역 변수에 저장
             
@@ -2336,6 +2434,7 @@
                 
                 if (info && info.stats) {
                     var stats = info.stats;
+                    var extras = info.extras || {};
                     var cardClass = stats.meets_requirement ? 'pass' : 'fail';
                     
                     html += '<div class="member-card-view ' + cardClass + '" style="width: 100%; max-width: 600px;">';
@@ -2381,6 +2480,23 @@
                         html += '<div class="attendance-value-mobile">' + displayText + '</div>';
                         html += '</div>';
                     }
+                    
+                    // 기타 항목들 추가
+                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                    html += '<div class="date-label-mobile">기타1</div>';
+                    html += '<div class="attendance-value-mobile">' + (extras.extra1 || 0) + '</div>';
+                    html += '</div>';
+                    
+                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                    html += '<div class="date-label-mobile">기타2</div>';
+                    html += '<div class="attendance-value-mobile">' + (extras.extra2 || 0) + '</div>';
+                    html += '</div>';
+                    
+                    html += '<div class="attendance-item-mobile extra" onclick="editExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                    html += '<div class="date-label-mobile">기타3</div>';
+                    html += '<div class="attendance-value-mobile">' + (extras.extra3 || 0) + '</div>';
+                    html += '</div>';
+                    
                     html += '</div>';
                     
                     html += '</div>';
@@ -2390,6 +2506,69 @@
             html += '</div>';
             
             return html;
+        }
+        
+        // 기타 점수 편집 (테이블 뷰용)
+        function editExtraValue(name, extraType, cell) {
+            var currentValue = parseInt(cell.textContent) || 0;
+            var newValue = prompt(name + '의 ' + extraType + ' 점수를 입력하세요:', currentValue);
+            
+            if (newValue === null) return; // 취소
+            
+            newValue = parseInt(newValue) || 0;
+            if (newValue < 0) newValue = 0;
+            
+            updateExtraValue(name, extraType, newValue, cell);
+        }
+        
+        // 기타 점수 편집 (모바일 카드 뷰용)
+        function editExtraValueMobile(name, extraType, cell) {
+            var valueElement = cell.querySelector('.attendance-value-mobile');
+            var currentValue = parseInt(valueElement.textContent) || 0;
+            var newValue = prompt(name + '의 ' + extraType + ' 점수를 입력하세요:', currentValue);
+            
+            if (newValue === null) return; // 취소
+            
+            newValue = parseInt(newValue) || 0;
+            if (newValue < 0) newValue = 0;
+            
+            updateExtraValue(name, extraType, newValue, valueElement);
+        }
+        
+        // 기타 점수 업데이트 서버 요청
+        function updateExtraValue(name, extraType, newValue, element) {
+            fetch('/api/extra_score', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    name: name,
+                    extra_type: extraType,
+                    value: newValue
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    // 즉시 셀 값 업데이트
+                    element.textContent = newValue;
+                    
+                    // 통계 업데이트를 위해 테이블 다시 로드
+                    setTimeout(function() {
+                        loadAttendanceTable();
+                    }, 100);
+                } else {
+                    alert('기타 점수 업데이트에 실패했습니다.');
+                }
+            })
+            .catch(function(error) {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
         }
         
         // 멤버 네비게이션 함수들
