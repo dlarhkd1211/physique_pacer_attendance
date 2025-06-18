@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>페이서 출석 관리 시스템</title>
-    <!-- SortableJS 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- SheetJS 라이브러리 (Excel 내보내기용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -49,8 +47,8 @@
         }
         
         .section {
-            margin-bottom: 40px;
-            padding: 25px;
+            margin-bottom: 30px;
+            padding: 20px;
             background: #f8f9fa;
             border-radius: 10px;
             border-left: 5px solid #667eea;
@@ -58,8 +56,8 @@
         
         .section h2 {
             color: #333;
-            margin-bottom: 20px;
-            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-size: 1.4em;
         }
         
         .controls {
@@ -70,7 +68,7 @@
         }
         
         input, select, button {
-            padding: 12px 16px;
+            padding: 10px 15px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
@@ -82,6 +80,7 @@
             border: none;
             cursor: pointer;
             font-weight: 600;
+            transition: all 0.2s ease;
         }
         
         button:hover {
@@ -89,89 +88,24 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
         
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-        }
-        
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        }
-        
-        /* Export 버튼 스타일 */
-        .export-section {
-            border-left-color: #17a2b8;
-        }
-        
-        .export-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 15px;
-        }
-        
-        .export-buttons button {
-            min-width: 120px;
-            font-size: 13px;
-        }
-        
-        /* 뷰 전환 버튼 - PC와 모바일 모두 표시 */
-        .view-toggle {
-            display: block; /* 항상 표시 */
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .view-toggle button {
-            margin: 0 5px;
-            padding: 8px 16px;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .view-toggle button.active {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-        }
-        
-        .view-toggle button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
-        }
+        .btn-success { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .btn-danger { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+        .btn-warning { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; }
+        .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
         
         /* 테이블 스타일 */
-        /* 고정 칼럼을 위한 테이블 스타일 수정 */
         .table-container {
-            position: relative;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
         }
         
         .attendance-table {
             width: 100%;
-            border-collapse: separate; /* collapse에서 separate로 변경 */
+            border-collapse: collapse;
             background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-spacing: 0; /* separate 모드에서 간격 제거 */
+            min-width: 800px;
         }
         
         .attendance-table th {
@@ -180,95 +114,29 @@
             padding: 12px 8px;
             text-align: center;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 12px;
             min-width: 60px;
-            border-right: 1px solid rgba(255,255,255,0.2); /* 헤더 구분선 */
         }
         
         .attendance-table td {
-            padding: 10px 6px;
+            padding: 10px 8px;
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
-            border-right: 1px solid #f0f0f0; /* 셀 구분선 */
             font-size: 13px;
-            min-width: 60px;
-        }
-
-        /* 고정 칼럼 스타일 */
-        .attendance-table th:nth-child(1),
-        .attendance-table th:nth-child(2),
-        .attendance-table th:nth-child(3),
-        .attendance-table td:nth-child(1),
-        .attendance-table td:nth-child(2),
-        .attendance-table td:nth-child(3) {
-            position: sticky;
-            z-index: 10;
-            background: white;
-            border-right: 2px solid #e0e0e0;
-        }
-        
-        /* 각 고정 칼럼의 위치 설정 */
-        .attendance-table th:nth-child(1),
-        .attendance-table td:nth-child(1) {
-            left: 0;
-            min-width: 80px;
-            z-index: 11;
-        }
-        
-        .attendance-table th:nth-child(2),
-        .attendance-table td:nth-child(2) {
-            left: 80px;
-            min-width: 100px;
-            z-index: 11;
-        }
-        
-        .attendance-table th:nth-child(3),
-        .attendance-table td:nth-child(3) {
-            left: 180px;
-            min-width: 60px;
-            z-index: 11;
-        }
-        
-        /* 헤더의 고정 칼럼은 더 높은 z-index */
-        .attendance-table th:nth-child(1),
-        .attendance-table th:nth-child(2),
-        .attendance-table th:nth-child(3) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            z-index: 12;
-        }
-        
-        /* 기타 칼럼 스타일 */
-        .extra-column {
-            background: #fff3cd !important;
-            border: 2px solid #ffc107 !important;
-        }
-        
-        .extra-column-header {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
-            color: #212529 !important;
-        }
-        
-        /* 스크롤 가능한 영역의 최소 너비 설정 */
-        .attendance-table {
-            min-width: 1000px; /* 기타 칼럼 추가로 인해 늘림 */
         }
         
         .attendance-cell {
             cursor: pointer;
-            user-select: none;
             font-weight: 600;
-            transition: all 0.2s ease;
             border-radius: 4px;
-            margin: 2px;
             padding: 8px;
             min-width: 40px;
             min-height: 40px;
-            text-align: center;
-            vertical-align: middle;
+            transition: all 0.2s ease;
         }
         
         .attendance-cell:hover {
-            transform: scale(1.1);
+            transform: scale(1.05);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
         
@@ -283,225 +151,14 @@
             border: 2px solid #dee2e6;
         }
         
-        .pass {
-            background-color: #e8f5e8;
-            color: #2e7d32;
-        }
-        
-        .fail {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        
-        /* 멤버 선택 드롭다운 */
-        .member-selector {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .member-selector select {
-            min-width: 200px;
-            font-size: 16px;
-            padding: 12px 16px;
-        }
-        
-        .member-selector label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        /* 카드 뷰 내비게이션 */
-        .card-navigation {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        
-        .nav-button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            min-width: 80px;
-        }
-        
-        .nav-button:hover {
-            background: #5a67d8;
-        }
-        
-        .nav-button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .member-indicator {
-            font-weight: bold;
-            color: #333;
-            text-align: center;
-            flex: 1;
-            margin: 0 15px;
-        }
-        
-        /* 단일 카드 표시 */
-        .single-card-container {
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .no-member-selected {
-            text-align: center;
-            padding: 60px 20px;
-            color: #666;
-            background: #f8f9fa;
-            border-radius: 15px;
-            border: 2px dashed #ddd;
-        }
-        
-        .no-member-selected h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .mobile-view {
-            display: none;
-        }
-        
-        .member-card-view {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid #667eea;
-        }
-        
-        .member-card-view.fail {
-            border-left-color: #dc3545;
-            background: #fff5f5;
-        }
-        
-        .member-card-view.pass {
-            border-left-color: #28a745;
-            background: #f8fff8;
-        }
-        
-        .member-header-mobile {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .member-name-mobile {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .member-role-mobile {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: 600;
-        }
-        
-        .member-stats-mobile {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            flex: 1;
-        }
-        
-        .stat-label {
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .attendance-grid-mobile {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .attendance-item-mobile {
-            text-align: center;
-            padding: 10px 5px;
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .attendance-item-mobile:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .attendance-item-mobile.present {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            color: white;
-            border-color: #4caf50;
-        }
-        
-        .attendance-item-mobile.absent {
-            background: white;
-            color: #333;
-            border-color: #dee2e6;
-        }
-        
-        .attendance-item-mobile.extra {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-            border-color: #ffc107;
-        }
-        
-        .date-label-mobile {
-            font-size: 0.7em;
-            line-height: 1.2;
-            margin-bottom: 5px;
-        }
-        
-        .attendance-value-mobile {
-            font-size: 1.1em;
-            font-weight: bold;
-        }
+        .pass { background-color: #e8f5e8; color: #2e7d32; }
+        .fail { background-color: #ffebee; color: #c62828; }
         
         /* 멤버 관리 */
         .member-management {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            margin-top: 20px;
         }
         
         .member-card {
@@ -510,11 +167,9 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 80px;
             cursor: move;
             position: relative;
         }
@@ -527,7 +182,7 @@
         }
         
         .member-name {
-            font-size: 1.3em;
+            font-size: 1.2em;
             font-weight: bold;
             color: #333;
             min-width: 100px;
@@ -536,8 +191,8 @@
         .member-role {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 6px 12px;
+            border-radius: 15px;
             font-size: 0.9em;
             font-weight: 600;
         }
@@ -545,11 +200,10 @@
         .member-actions {
             display: flex;
             gap: 10px;
-            flex-shrink: 0;
         }
         
         .member-actions button {
-            padding: 8px 12px;
+            padding: 6px 10px;
             font-size: 12px;
         }
         
@@ -560,19 +214,7 @@
             transform: translateY(-50%);
             cursor: move;
             color: #6c757d;
-            font-size: 18px;
-            padding: 5px;
-        }
-        
-        .sortable-ghost {
-            opacity: 0.3;
-            background: #f8f9fa;
-        }
-        
-        .sortable-drag {
-            opacity: 0.6;
-            transform: rotate(5deg);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            font-size: 16px;
         }
         
         /* 모달 */
@@ -589,11 +231,11 @@
         
         .modal-content {
             background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 15px;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
             width: 90%;
-            max-width: 500px;
+            max-width: 400px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         
@@ -601,20 +243,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .close {
             color: #aaa;
-            float: right;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             cursor: pointer;
         }
         
-        .close:hover {
-            color: #000;
-        }
+        .close:hover { color: #000; }
         
         .loading {
             text-align: center;
@@ -638,79 +277,13 @@
             margin: 15px 0;
         }
         
-        /* PC 버전 카드뷰 최적화 */
-        @media (min-width: 769px) {
-            .desktop-view {
-                display: block; /* PC에서 기본값은 테이블 뷰 */
-            }
-            
-            .mobile-view {
-                display: none; /* PC에서 기본값은 카드뷰 숨김 */
-            }
-            
-            /* PC에서 카드뷰가 선택된 경우 */
-            .mobile-view.active {
-                display: block;
-            }
-            
-            .desktop-view.inactive {
-                display: none;
-            }
-            
-            /* PC 카드뷰 스타일 조정 */
-            .member-card-view {
-                max-width: 800px;
-                margin: 0 auto 20px auto;
-            }
-            
-            .single-card-container {
-                min-height: 300px;
-            }
-            
-            /* PC 네비게이션 버튼 크기 조정 */
-            .card-navigation {
-                max-width: 600px;
-                margin: 0 auto 20px auto;
-            }
-            
-            .nav-button {
-                padding: 12px 20px;
-                font-size: 16px;
-                min-width: 100px;
-            }
-            
-            /* PC 멤버 선택 드롭다운 */
-            .member-selector {
-                max-width: 400px;
-                margin: 0 auto 20px auto;
-            }
-            
-            .member-selector select {
-                min-width: 250px;
-                font-size: 16px;
-            }
-        }
+        /* 반응형 */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .header {
-                padding: 20px 15px;
-            }
-            
-            .header h1 {
-                font-size: 1.8em;
-            }
-            
-            .content {
-                padding: 15px;
-            }
-            
-            .section {
-                padding: 15px;
-                margin-bottom: 20px;
-            }
+            body { padding: 10px; }
+            .header { padding: 20px 15px; }
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 15px; }
+            .section { padding: 15px; margin-bottom: 20px; }
             
             .controls {
                 flex-direction: column;
@@ -718,64 +291,33 @@
                 gap: 10px;
             }
             
-            .controls > * {
-                width: 100%;
-            }
-            
             input, select, button {
+                width: 100%;
                 padding: 12px;
                 font-size: 16px;
             }
             
-            /* 모바일에서는 기본적으로 카드 뷰 */
-            .desktop-view {
-                display: none;
-            }
-            
-            .mobile-view {
-                display: block;
-            }
-            
             .member-card {
                 flex-direction: column;
-                align-items: stretch;
                 gap: 15px;
-                padding: 15px;
+                text-align: center;
             }
             
             .member-info {
                 margin-left: 0;
                 flex-direction: column;
                 gap: 10px;
-                align-items: center;
-                text-align: center;
             }
             
             .member-actions {
                 justify-content: center;
                 flex-wrap: wrap;
-                gap: 8px;
             }
             
             .drag-handle {
                 position: static;
                 transform: none;
-                align-self: center;
                 margin-bottom: 10px;
-            }
-            
-            .modal-content {
-                width: 95%;
-                margin: 5% auto;
-                padding: 20px;
-            }
-            
-            .export-buttons {
-                flex-direction: column;
-            }
-            
-            .export-buttons button {
-                width: 100%;
             }
         }
     </style>
@@ -783,14 +325,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊페이서 출석 관리 시스템</h1>
+            <h1>📊 페이서 출석 관리 시스템</h1>
             <p>피지크 페이서 출석 관리자 페이지</p>
         </div>
         
         <div class="content">
             <!-- 월 선택 -->
             <div class="section">
-                <h2>📅 월 선택 및 관리</h2>
+                <h2>📅 월 선택</h2>
                 <div class="controls">
                     <label>년도:</label>
                     <input type="number" id="year" value="2024" min="2020" max="2030">
@@ -810,42 +352,9 @@
                         <option value="12">12월</option>
                     </select>
                     <button onclick="loadCurrentMonth()">조회</button>
-                    <button class="btn-success" onclick="copyFromPreviousMonth()">전월 멤버 복사</button>
+                    <button class="btn-success" onclick="copyFromPreviousMonth()">전월 복사</button>
                 </div>
                 <div id="monthMessage"></div>
-            </div>
-            
-            <!-- 데이터 Export -->
-            <div class="section export-section">
-                <h2>📁 데이터 내보내기</h2>
-                <p>현재 선택된 월의 출석 데이터를 다양한 형식으로 내보낼 수 있습니다.</p>
-                <div class="export-buttons">
-                    <button class="btn-info" onclick="exportToExcel()">📊 Excel 파일로 내보내기</button>
-                    <button class="btn-info" onclick="exportToCSV()">📋 CSV 파일로 내보내기</button>
-                    <button class="btn-info" onclick="exportToJSON()">💾 JSON 파일로 내보내기</button>
-                    <button class="btn-info" onclick="exportSummaryReport()">📈 요약 보고서 내보내기</button>
-                </div>
-                <div id="exportMessage"></div>
-            </div>
-            
-            <!-- 데이터 Import -->
-            <div class="section export-section">
-                <h2>📥 데이터 가져오기</h2>
-                <p><strong>⚠️ 주의:</strong> 가져온 데이터는 현재 선택된 월(<span id="currentMonthDisplay"></span>)의 모든 데이터를 덮어씁니다!</p>
-                <div class="controls">
-                    <input type="file" id="importFileInput" accept=".json,.xlsx,.csv" style="margin-bottom: 10px;">
-                    <div class="export-buttons">
-                        <button class="btn-warning" onclick="importFromFile()">📁 파일에서 가져오기</button>
-                        <button class="btn-secondary" onclick="previewImportData()" id="previewBtn" style="display: none;">👁️ 미리보기</button>
-                        <button class="btn-success" onclick="confirmImport()" id="confirmBtn" style="display: none;">✅ 가져오기 확정</button>
-                        <button class="btn-danger" onclick="cancelImport()" id="cancelBtn" style="display: none;">❌ 취소</button>
-                    </div>
-                </div>
-                <div id="importMessage"></div>
-                <div id="importPreview" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
-                    <h4>📋 가져올 데이터 미리보기</h4>
-                    <div id="previewContent"></div>
-                </div>
             </div>
             
             <!-- 멤버 추가 -->
@@ -862,6 +371,16 @@
                     <button onclick="addMember()">멤버 추가</button>
                 </div>
                 <div id="memberMessage"></div>
+            </div>
+            
+            <!-- 데이터 내보내기 -->
+            <div class="section">
+                <h2>📁 데이터 내보내기</h2>
+                <div class="controls">
+                    <button class="btn-info" onclick="exportToExcel()">📊 Excel</button>
+                    <button class="btn-info" onclick="exportToCSV()">📋 CSV</button>
+                </div>
+                <div id="exportMessage"></div>
             </div>
             
             <!-- 출석 현황 -->
@@ -897,7 +416,7 @@
                     <option value="페이서 강남">페이서 강남</option>
                     <option value="포토">포토</option>
                 </select>
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 15px;">
                     <button onclick="updateMemberRole()">변경</button>
                     <button class="btn-secondary" onclick="closeRoleModal()">취소</button>
                 </div>
@@ -906,466 +425,18 @@
     </div>
 
     <script>
+        // =============================================================================
         // 전역 변수
+        // =============================================================================
         var currentYear = 2024;
         var currentMonth = 6;
         var currentMembers = {};
         var editingMember = null;
-        var currentView = 'auto'; // 자동 감지 (모바일: card, PC: table)
-        var selectedMemberIndex = 0; // 현재 선택된 멤버 인덱스
-        var memberList = []; // 멤버 리스트 (정렬된)
-        var userSelectedView = null; // 사용자가 직접 선택한 뷰 (null이면 기본값 사용)
-        var currentReportData = null; // 현재 보고서 데이터 (export용)
-        var importData = null; // 가져올 데이터 임시 저장
-        var importFileType = null; // 가져올 파일 타입
-        
-        // 현재 환경이 모바일인지 확인
-        function isMobile() {
-            return window.innerWidth <= 768;
-        }
-        
-        // 기본 뷰 결정 (모바일: card, PC: table)
-        function getDefaultView() {
-            return isMobile() ? 'card' : 'table';
-        }
-        
-        // 현재 사용해야 할 뷰 결정
-        function getCurrentView() {
-            // 사용자가 직접 선택한 뷰가 있으면 그것 사용
-            if (userSelectedView) {
-                return userSelectedView;
-            }
-            // 없으면 환경에 맞는 기본값 사용
-            return getDefaultView();
-        }
-
-        // =============================================================================
-        // EXPORT 기능들
-        // =============================================================================
-        
-        // Excel 파일로 내보내기
-        function exportToExcel() {
-            if (!currentReportData) {
-                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
-                return;
-            }
-            
-            try {
-                var wb = XLSX.utils.book_new();
-                
-                // 출석 현황 시트
-                var wsData = generateExcelData(currentReportData);
-                var ws = XLSX.utils.aoa_to_sheet(wsData);
-                
-                // 열 너비 설정
-                var colWidths = [
-                    { wch: 12 }, // 직책
-                    { wch: 15 }, // 성명
-                    { wch: 8 },  // 합계
-                ];
-                
-                var dates = currentReportData.dates || [];
-                for (var i = 0; i < dates.length; i++) {
-                    colWidths.push({ wch: 10 });
-                }
-                
-                // 기타 칼럼들 추가
-                colWidths.push({ wch: 10 }); // 기타1
-                colWidths.push({ wch: 10 }); // 기타2
-                colWidths.push({ wch: 10 }); // 기타3
-                
-                ws['!cols'] = colWidths;
-                
-                XLSX.utils.book_append_sheet(wb, ws, "출석현황");
-                
-                // 요약 통계 시트
-                var summaryData = generateSummaryData(currentReportData);
-                var summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-                summaryWs['!cols'] = [
-                    { wch: 15 }, // 이름
-                    { wch: 12 }, // 직책
-                    { wch: 10 }, // 총 출석
-                    { wch: 12 }, // 수요일 출석
-                    { wch: 10 }, // 조건 충족
-                    { wch: 12 }, // 달성률
-                    { wch: 8 },  // 기타1
-                    { wch: 8 },  // 기타2
-                    { wch: 8 }   // 기타3
-                ];
-                
-                XLSX.utils.book_append_sheet(wb, summaryWs, "요약통계");
-                
-                // 파일명 생성
-                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.xlsx';
-                
-                // 파일 다운로드
-                XLSX.writeFile(wb, fileName);
-                
-                showMessage('Excel 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
-            } catch (error) {
-                showMessage('Excel 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
-                console.error('Excel export error:', error);
-            }
-        }
-        
-        // CSV 파일로 내보내기
-        function exportToCSV() {
-            if (!currentReportData) {
-                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
-                return;
-            }
-            
-            try {
-                var csvContent = generateCSVContent(currentReportData);
-                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.csv';
-                
-                downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
-                
-                showMessage('CSV 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
-            } catch (error) {
-                showMessage('CSV 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
-                console.error('CSV export error:', error);
-            }
-        }
-        
-        // JSON 파일로 내보내기
-        function exportToJSON() {
-            if (!currentReportData) {
-                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
-                return;
-            }
-            
-            try {
-                var jsonData = {
-                    exportDate: new Date().toISOString(),
-                    year: currentYear,
-                    month: currentMonth,
-                    data: currentReportData
-                };
-                
-                var jsonContent = JSON.stringify(jsonData, null, 2);
-                var fileName = currentYear + '년_' + currentMonth + '월_출석데이터.json';
-                
-                downloadFile(jsonContent, fileName, 'application/json;charset=utf-8;');
-                
-                showMessage('JSON 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
-            } catch (error) {
-                showMessage('JSON 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
-                console.error('JSON export error:', error);
-            }
-        }
-        
-        // 요약 보고서 내보내기
-        function exportSummaryReport() {
-            if (!currentReportData) {
-                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
-                return;
-            }
-            
-            try {
-                var reportContent = generateSummaryReport(currentReportData);
-                var fileName = currentYear + '년_' + currentMonth + '월_출석요약보고서.txt';
-                
-                downloadFile(reportContent, fileName, 'text/plain;charset=utf-8;');
-                
-                showMessage('요약 보고서가 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
-            } catch (error) {
-                showMessage('요약 보고서 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
-                console.error('Summary report error:', error);
-            }
-        }
-        
-        // Excel 데이터 생성 (기타 칼럼 포함)
-        function generateExcelData(reportData) {
-            var data = reportData.members || reportData;
-            var dates = reportData.dates || [];
-            
-            // 멤버를 order 순으로 정렬
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var result = [];
-            
-            // 헤더 행
-            var header = ['직책', '성명', '합계'];
-            for (var i = 0; i < dates.length; i++) {
-                var date = new Date(dates[i]);
-                var month = date.getMonth() + 1;
-                var day = date.getDate();
-                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                var weekday = weekdays[date.getDay()];
-                header.push(month + '/' + day + '(' + weekday + ')');
-            }
-            // 기타 칼럼 추가
-            header.push('기타1');
-            header.push('기타2');
-            header.push('기타3');
-            result.push(header);
-            
-            // 데이터 행
-            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
-                var name = memberEntries[memberIndex];
-                var info = data[name];
-                
-                if (!info || !info.stats) continue;
-                
-                var row = [
-                    info.role || '미정',
-                    name,
-                    info.stats.total || 0
-                ];
-                
-                for (var dateIndex = 0; dateIndex < dates.length; dateIndex++) {
-                    var date = dates[dateIndex];
-                    var attendance = info.attendance || {};
-                    var status = attendance[date] || 0;
-                    row.push(status === 1 ? '출석' : '불참');
-                }
-                
-                // 기타 칼럼 데이터 추가 - attendance에서 가져오기 (화면 표시와 동일)
-                var attendance = info.attendance || {};
-                var extras = info.extras || {};
-                
-                // attendance에서 먼저 확인하고, 없으면 extras에서 확인
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
-                
-                row.push(extra1);
-                row.push(extra2);
-                row.push(extra3);
-                
-                result.push(row);
-            }
-            
-            return result;
-        }
-        
-        // 요약 통계 데이터 생성 (기타 칼럼 포함)
-        function generateSummaryData(reportData) {
-            var data = reportData.members || reportData;
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var result = [];
-            result.push(['이름', '직책', '총 출석', '수요일 출석', '조건 충족', '달성률(%)', '기타1', '기타2', '기타3']);
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                
-                if (!info || !info.stats) continue;
-                
-                var stats = info.stats;
-                var role = info.role || '미정';
-                
-                // 기타 점수도 attendance와 extras 모두에서 확인 (화면 표시와 동일)
-                var attendance = info.attendance || {};
-                var extras = info.extras || {};
-                
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
-                
-                // 달성률 계산
-                var achievementRate = 0;
-                if (role !== '운영진' && stats.required_total > 0) {
-                    achievementRate = Math.round((stats.total / stats.required_total) * 100);
-                }
-                
-                result.push([
-                    name,
-                    role,
-                    stats.total || 0,
-                    stats.wednesday || 0,
-                    stats.meets_requirement ? '충족' : '미충족',
-                    role === '운영진' ? 'N/A' : achievementRate + '%',
-                    extra1,
-                    extra2,
-                    extra3
-                ]);
-            }
-            
-            return result;
-        }
-        
-        // CSV 컨텐츠 생성
-        function generateCSVContent(reportData) {
-            var excelData = generateExcelData(reportData);
-            var csvContent = '';
-            
-            for (var i = 0; i < excelData.length; i++) {
-                var row = excelData[i];
-                var csvRow = row.map(function(cell) {
-                    // CSV에서 쉼표와 따옴표 처리
-                    var cellStr = String(cell);
-                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-                        cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
-                    }
-                    return cellStr;
-                }).join(',');
-                
-                csvContent += csvRow + '\n';
-            }
-            
-            // UTF-8 BOM 추가 (한글 깨짐 방지)
-            return '\uFEFF' + csvContent;
-        }
-        
-        // 요약 보고서 생성 (기타 칼럼 포함)
-        function generateSummaryReport(reportData) {
-            var data = reportData.members || reportData;
-            var dates = reportData.dates || [];
-            var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            var report = '';
-            report += '='.repeat(60) + '\n';
-            report += '               출석 관리 시스템 요약 보고서\n';
-            report += '='.repeat(60) + '\n';
-            report += '보고서 생성일: ' + new Date().toLocaleString('ko-KR') + '\n';
-            report += '대상 기간: ' + currentYear + '년 ' + currentMonth + '월\n';
-            report += '총 출석일: ' + dates.length + '일\n';
-            report += '총 멤버수: ' + memberEntries.length + '명\n';
-            report += '\n';
-            
-            // 역할별 통계
-            var roleStats = {};
-            var totalPass = 0;
-            var totalFail = 0;
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                if (!info || !info.stats) continue;
-                
-                var role = info.role || '미정';
-                if (!roleStats[role]) {
-                    roleStats[role] = { total: 0, pass: 0, fail: 0 };
-                }
-                
-                roleStats[role].total++;
-                if (info.stats.meets_requirement) {
-                    roleStats[role].pass++;
-                    totalPass++;
-                } else {
-                    roleStats[role].fail++;
-                    totalFail++;
-                }
-            }
-            
-            report += '[ 역할별 통계 ]\n';
-            report += '-'.repeat(40) + '\n';
-            for (var role in roleStats) {
-                var stat = roleStats[role];
-                var passRate = stat.total > 0 ? Math.round((stat.pass / stat.total) * 100) : 0;
-                report += role + ': ' + stat.total + '명 (충족: ' + stat.pass + '명, 미충족: ' + stat.fail + '명, 충족률: ' + passRate + '%)\n';
-            }
-            report += '\n';
-            
-            report += '[ 전체 요약 ]\n';
-            report += '-'.repeat(40) + '\n';
-            var overallPassRate = (totalPass + totalFail) > 0 ? Math.round((totalPass / (totalPass + totalFail)) * 100) : 0;
-            report += '조건 충족: ' + totalPass + '명\n';
-            report += '조건 미충족: ' + totalFail + '명\n';
-            report += '전체 충족률: ' + overallPassRate + '%\n';
-            report += '\n';
-            
-            report += '[ 개별 멤버 상세 ]\n';
-            report += '-'.repeat(60) + '\n';
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var info = data[name];
-                if (!info || !info.stats) continue;
-                
-                var stats = info.stats;
-                var role = info.role || '미정';
-                
-                // 기타 점수도 attendance와 extras 모두에서 확인 (화면 표시와 동일)
-                var attendance = info.attendance || {};
-                var extras = info.extras || {};
-                
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
-                
-                report += (i + 1) + '. ' + name + ' (' + role + ')\n';
-                report += '   총 출석: ' + (stats.total || 0) + '회';
-                if (role === '페이서 강남') {
-                    report += ' (수요일: ' + (stats.wednesday || 0) + '회)';
-                }
-                report += '\n';
-                
-                // 기타 점수 추가
-                if (extras.extra1 || extras.extra2 || extras.extra3) {
-                    report += '   기타 점수: ';
-                    report += '기타1(' + extra1 + ') ';
-                    report += '기타2(' + extra2 + ') ';
-                    report += '기타3(' + extra3 + ')';
-                    report += '\n';
-                }
-                
-                if (role !== '운영진') {
-                    report += '   필요 출석: ' + (stats.required_total || 0) + '회';
-                    if (stats.required_wednesday > 0) {
-                        report += ' (수요일: ' + stats.required_wednesday + '회)';
-                    }
-                    report += '\n';
-                    report += '   조건 충족: ' + (stats.meets_requirement ? '✓ 충족' : '✗ 미충족') + '\n';
-                }
-                report += '\n';
-            }
-            
-            report += '[ 출석 조건 안내 ]\n';
-            report += '-'.repeat(40) + '\n';
-            report += '• 운영진: 출석 조건 없음\n';
-            report += '• 페이서: 월 3회 이상 출석\n';
-            report += '• 페이서 강남: 월 3회 이상 출석 (그 중 수요일 2회 이상)\n';
-            report += '• 포토: 월 1회 이상 출석\n';
-            report += '• 기타1, 기타2, 기타3: 추가 점수 (총 합계에 포함)\n';
-            report += '\n';
-            
-            report += '='.repeat(60) + '\n';
-            report += '                    보고서 끝\n';
-            report += '='.repeat(60) + '\n';
-            
-            return report;
-        }
-        
-        // 파일 다운로드 함수
-        function downloadFile(content, fileName, mimeType) {
-            var blob = new Blob([content], { type: mimeType });
-            var url = window.URL.createObjectURL(blob);
-            
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.style.display = 'none';
-            
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            window.URL.revokeObjectURL(url);
-        }
+        var currentReportData = null;
         
         // =============================================================================
-        // 기존 기능들
+        // 초기화
         // =============================================================================
-        
         document.addEventListener('DOMContentLoaded', function() {
             var currentDate = new Date();
             currentYear = currentDate.getFullYear();
@@ -1385,532 +456,45 @@
             document.getElementById('year').addEventListener('change', loadCurrentMonth);
             document.getElementById('month').addEventListener('change', loadCurrentMonth);
             
-            // 초기 데이터 로드
             loadCurrentMonth();
-            updateCurrentMonthDisplay();
-            
-            // 파일 입력 변경 감지
-            document.getElementById('importFileInput').addEventListener('change', function(e) {
-                resetImportUI();
-            });
         });
         
         // =============================================================================
-        // IMPORT 기능들
+        // 데이터 로드 및 관리
         // =============================================================================
-        
-        // 파일에서 데이터 가져오기
-        function importFromFile() {
-            var fileInput = document.getElementById('importFileInput');
-            var file = fileInput.files[0];
-            var messageDiv = document.getElementById('importMessage');
-            
-            if (!file) {
-                showMessage('파일을 선택해주세요.', 'error', messageDiv);
-                return;
-            }
-            
-            // 지원하는 파일 형식 확인
-            var fileName = file.name.toLowerCase();
-            if (fileName.endsWith('.json')) {
-                importFileType = 'json';
-                readJSONFile(file);
-            } else if (fileName.endsWith('.xlsx')) {
-                importFileType = 'excel';
-                readExcelFile(file);
-            } else if (fileName.endsWith('.csv')) {
-                importFileType = 'csv';
-                readCSVFile(file);
-            } else {
-                showMessage('지원하지 않는 파일 형식입니다. JSON, Excel(.xlsx), CSV 파일만 지원합니다.', 'error', messageDiv);
-                return;
-            }
-        }
-        
-        // JSON 파일 읽기
-        function readJSONFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-            
-            reader.onload = function(e) {
-                try {
-                    var jsonData = JSON.parse(e.target.result);
-                    
-                    // JSON 데이터 형식 검증
-                    if (validateJSONImportData(jsonData)) {
-                        importData = jsonData;
-                        showImportPreview();
-                        showMessage('파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('올바르지 않은 JSON 데이터 형식입니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('JSON 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-            
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-            
-            reader.readAsText(file);
-        }
-        
-        // Excel 파일 읽기
-        function readExcelFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-            
-            reader.onload = function(e) {
-                try {
-                    var data = new Uint8Array(e.target.result);
-                    var workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 첫 번째 시트에서 데이터 추출
-                    var firstSheetName = workbook.SheetNames[0];
-                    var worksheet = workbook.Sheets[firstSheetName];
-                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    // Excel 데이터를 JSON 형식으로 변환
-                    var convertedData = convertExcelToImportData(jsonData);
-                    
-                    if (convertedData) {
-                        importData = convertedData;
-                        showImportPreview();
-                        showMessage('Excel 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('Excel 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('Excel 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-            
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-        
-        // CSV 파일 읽기
-        function readCSVFile(file) {
-            var reader = new FileReader();
-            var messageDiv = document.getElementById('importMessage');
-            
-            reader.onload = function(e) {
-                try {
-                    var csvText = e.target.result;
-                    var lines = csvText.split('\n');
-                    var csvData = [];
-                    
-                    for (var i = 0; i < lines.length; i++) {
-                        if (lines[i].trim()) {
-                            csvData.push(parseCSVLine(lines[i]));
-                        }
-                    }
-                    
-                    // CSV 데이터를 JSON 형식으로 변환
-                    var convertedData = convertExcelToImportData(csvData); // Excel과 동일한 형식
-                    
-                    if (convertedData) {
-                        importData = convertedData;
-                        showImportPreview();
-                        showMessage('CSV 파일을 성공적으로 읽었습니다. 미리보기를 확인한 후 가져오기를 진행하세요.', 'success', messageDiv);
-                    } else {
-                        showMessage('CSV 파일 형식이 올바르지 않습니다.', 'error', messageDiv);
-                    }
-                } catch (error) {
-                    showMessage('CSV 파일 읽기 오류: ' + error.message, 'error', messageDiv);
-                }
-            };
-            
-            reader.onerror = function() {
-                showMessage('파일 읽기 중 오류가 발생했습니다.', 'error', messageDiv);
-            };
-            
-            reader.readAsText(file, 'UTF-8');
-        }
-        
-        // CSV 라인 파싱
-        function parseCSVLine(line) {
-            var result = [];
-            var current = '';
-            var inQuotes = false;
-            
-            for (var i = 0; i < line.length; i++) {
-                var char = line[i];
-                
-                if (char === '"') {
-                    if (inQuotes && line[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            
-            result.push(current.trim());
-            return result;
-        }
-        
-        // JSON 데이터 형식 검증
-        function validateJSONImportData(data) {
-            // 내보내기 형식인지 확인
-            if (data.members && data.dates && data.year && data.month) {
-                return true;
-            }
-            
-            // 백업 형식인지 확인
-            if (data.data && typeof data.data === 'object') {
-                return true;
-            }
-            
-            return false;
-        }
-        
-        // Excel/CSV 데이터를 import 형식으로 변환 (기타 칼럼 포함)
-        function convertExcelToImportData(data) {
-            if (data.length < 2) return null;
-            
-            var headers = data[0];
-            var memberRows = data.slice(1);
-            
-            // 헤더에서 날짜 추출
-            var dates = [];
-            var dateStartIndex = 3; // 직책, 성명, 합계 다음부터
-            var extraStartIndex = -1; // 기타 칼럼 시작 인덱스
-            
-            for (var i = dateStartIndex; i < headers.length; i++) {
-                var header = headers[i];
-                if (header && typeof header === 'string') {
-                    // 기타 칼럼 감지
-                    if (header === '기타1' || header === '기타2' || header === '기타3') {
-                        if (extraStartIndex === -1) {
-                            extraStartIndex = i;
-                        }
-                        break;
-                    }
-                    
-                    // 날짜 형식 파싱 (예: "6/1(월)", "2024-06-01" 등)
-                    var dateStr = parseDateFromHeader(header);
-                    if (dateStr) {
-                        dates.push(dateStr);
-                    }
-                }
-            }
-            
-            if (dates.length === 0) return null;
-            
-            // 멤버 데이터 구성
-            var members = {};
-            var order = 0;
-            
-            for (var i = 0; i < memberRows.length; i++) {
-                var row = memberRows[i];
-                if (row.length < 3) continue;
-                
-                var role = row[0];
-                var name = row[1];
-                
-                if (!name || !role) continue;
-                
-                var attendance = {};
-                for (var j = 0; j < dates.length; j++) {
-                    var cellValue = row[dateStartIndex + j];
-                    var status = 0;
-                    
-                    if (cellValue === '출석' || cellValue === '1' || cellValue === 1) {
-                        status = 1;
-                    }
-                    
-                    attendance[dates[j]] = status;
-                }
-                
-                // 기타 데이터 추출
-                var extras = {};
-                if (extraStartIndex !== -1) {
-                    extras.extra1 = parseInt(row[extraStartIndex]) || 0;
-                    extras.extra2 = parseInt(row[extraStartIndex + 1]) || 0;
-                    extras.extra3 = parseInt(row[extraStartIndex + 2]) || 0;
-                }
-                
-                members[name] = {
-                    role: role,
-                    order: order++,
-                    attendance: attendance,
-                    extras: extras,
-                    stats: calculateStatsFromAttendance(attendance, role, dates, extras)
-                };
-            }
-            
-            return {
-                year: currentYear,
-                month: currentMonth,
-                members: members,
-                dates: dates,
-                exportDate: new Date().toISOString()
-            };
-        }
-        
-        // 헤더에서 날짜 파싱
-        function parseDateFromHeader(header) {
-            // "6/1(월)" 형식
-            var match1 = header.match(/(\d+)\/(\d+)/);
-            if (match1) {
-                var month = parseInt(match1[1]);
-                var day = parseInt(match1[2]);
-                return currentYear + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            }
-            
-            // "2024-06-01" 형식
-            var match2 = header.match(/(\d{4})-(\d{2})-(\d{2})/);
-            if (match2) {
-                return header;
-            }
-            
-            return null;
-        }
-        
-        // 출석 데이터에서 통계 계산 (기타 점수 포함)
-        function calculateStatsFromAttendance(attendance, role, dates, extras) {
-            var total = 0;
-            var wednesday = 0;
-            
-            for (var i = 0; i < dates.length; i++) {
-                var date = dates[i];
-                if (attendance[date] === 1) {
-                    total++;
-                    
-                    var dateObj = new Date(date);
-                    if (dateObj.getDay() === 3) {
-                        wednesday++;
-                    }
-                }
-            }
-            
-            // 기타 점수 추가 - extras와 attendance 둘 다 확인
-            var extraTotal = 0;
-            if (extras) {
-                extraTotal += (extras.extra1 || 0) + (extras.extra2 || 0) + (extras.extra3 || 0);
-            }
-            
-            // attendance 객체에서도 기타 점수 확인 (서버 구조에 따라)
-            if (!extraTotal) {
-                extraTotal += (attendance.extra1 || 0) + (attendance.extra2 || 0) + (attendance.extra3 || 0);
-            }
-            
-            total += extraTotal;
-            
-            // 조건 충족 여부 계산
-            var requirements = {
-                '운영진': { total: 0, wednesday: 0 },
-                '페이서': { total: 3, wednesday: 0 },
-                '페이서 강남': { total: 3, wednesday: 2 },
-                '포토': { total: 1, wednesday: 0 }
-            };
-            
-            var req = requirements[role] || { total: 0, wednesday: 0 };
-            var meetsRequirement = role === '운영진' || 
-                                 (total >= req.total && wednesday >= req.wednesday);
-            
-            return {
-                total: total,
-                wednesday: wednesday,
-                meets_requirement: meetsRequirement,
-                required_total: req.total,
-                required_wednesday: req.wednesday
-            };
-        }
-        
-        // 가져올 데이터 미리보기 표시
-        function showImportPreview() {
-            var previewDiv = document.getElementById('importPreview');
-            var previewContent = document.getElementById('previewContent');
-            
-            if (!importData) return;
-            
-            var html = '';
-            html += '<p><strong>🗓️ 대상 기간:</strong> ' + importData.year + '년 ' + importData.month + '월</p>';
-            html += '<p><strong>👥 멤버 수:</strong> ' + Object.keys(importData.members || {}).length + '명</p>';
-            html += '<p><strong>📅 출석일 수:</strong> ' + (importData.dates || []).length + '일</p>';
-            
-            html += '<div style="margin-top: 15px;"><strong>👤 멤버 목록:</strong></div>';
-            html += '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 5px; border-radius: 4px;">';
-            
-            var memberEntries = Object.keys(importData.members || {});
-            memberEntries.sort(function(a, b) {
-                var orderA = importData.members[a].order || 0;
-                var orderB = importData.members[b].order || 0;
-                return orderA - orderB;
-            });
-            
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var member = importData.members[name];
-                var stats = member.stats || {};
-                var extras = member.extras || {};
-                
-                html += '<div style="padding: 5px; border-bottom: 1px solid #eee;">';
-                html += '<strong>' + name + '</strong> (' + (member.role || '미정') + ') - ';
-                html += '출석: ' + (stats.total || 0) + '회';
-                if (member.role === '페이서 강남') {
-                    html += ' (수요일: ' + (stats.wednesday || 0) + '회)';
-                }
-                if (extras.extra1 || extras.extra2 || extras.extra3) {
-                    html += ' + 기타(' + (extras.extra1 || 0) + ',' + (extras.extra2 || 0) + ',' + (extras.extra3 || 0) + ')';
-                }
-                html += ' - ' + (stats.meets_requirement ? '✅ 충족' : '❌ 미충족');
-                html += '</div>';
-            }
-            
-            html += '</div>';
-            
-            html += '<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">';
-            html += '<strong>⚠️ 주의사항:</strong><br>';
-            html += '• 현재 ' + currentYear + '년 ' + currentMonth + '월의 모든 데이터가 삭제됩니다<br>';
-            html += '• 가져오기 전에 현재 데이터를 백업하는 것을 권장합니다<br>';
-            html += '• 이 작업은 되돌릴 수 없습니다';
-            html += '</div>';
-            
-            previewContent.innerHTML = html;
-            previewDiv.style.display = 'block';
-            
-            // 버튼들 표시
-            document.getElementById('previewBtn').style.display = 'inline-block';
-            document.getElementById('confirmBtn').style.display = 'inline-block';
-            document.getElementById('cancelBtn').style.display = 'inline-block';
-        }
-        
-        // 미리보기 확장
-        function previewImportData() {
-            // 상세 미리보기 모달이나 페이지를 열 수 있음
-            alert('상세 미리보기 기능은 현재 위의 요약 정보를 참고해주세요.');
-        }
-        
-        // 가져오기 확정
-        function confirmImport() {
-            if (!importData) {
-                showMessage('가져올 데이터가 없습니다.', 'error', document.getElementById('importMessage'));
-                return;
-            }
-            
-            if (!confirm('정말로 현재 월(' + currentYear + '년 ' + currentMonth + '월)의 모든 데이터를 덮어쓰시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!')) {
-                return;
-            }
-            
-            var messageDiv = document.getElementById('importMessage');
-            showMessage('데이터를 가져오는 중입니다...', 'info', messageDiv);
-            
-            // 서버에 데이터 전송
-            fetch('/api/import_month_data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    data: importData
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(result) {
-                if (result.success) {
-                    showMessage('데이터를 성공적으로 가져왔습니다!', 'success', messageDiv);
-                    resetImportUI();
-                    
-                    // 화면 새로고침
-                    setTimeout(function() {
-                        loadCurrentMonth();
-                    }, 1000);
-                } else {
-                    showMessage('데이터 가져오기에 실패했습니다: ' + (result.error || '알 수 없는 오류'), 'error', messageDiv);
-                }
-            })
-            .catch(function(error) {
-                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
-            });
-        }
-        
-        // 가져오기 취소
-        function cancelImport() {
-            resetImportUI();
-            showMessage('가져오기를 취소했습니다.', 'info', document.getElementById('importMessage'));
-        }
-        
-        // Import UI 초기화
-        function resetImportUI() {
-            importData = null;
-            importFileType = null;
-            document.getElementById('importFileInput').value = '';
-            document.getElementById('importPreview').style.display = 'none';
-            document.getElementById('previewBtn').style.display = 'none';
-            document.getElementById('confirmBtn').style.display = 'none';
-            document.getElementById('cancelBtn').style.display = 'none';
-        }
-        
-        // 현재 월 데이터 로드
         function loadCurrentMonth() {
             currentYear = parseInt(document.getElementById('year').value);
             currentMonth = parseInt(document.getElementById('month').value);
-            
-            // 현재 월 표시 업데이트
-            updateCurrentMonthDisplay();
             
             loadMemberManagement();
             loadAttendanceTable();
         }
         
-        // 현재 월 표시 업데이트
-        function updateCurrentMonthDisplay() {
-            var displayElement = document.getElementById('currentMonthDisplay');
-            if (displayElement) {
-                displayElement.textContent = currentYear + '년 ' + currentMonth + '월';
-            }
-        }
-        
-        // 전월 멤버 복사
         function copyFromPreviousMonth() {
             var messageDiv = document.getElementById('monthMessage');
             
             fetch('/api/copy_previous_month', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth })
             })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
                     showMessage('전월 멤버를 성공적으로 복사했습니다!', 'success', messageDiv);
-                    // 전월 멤버 복사 후 첫 번째 멤버 선택
-                    selectedMemberIndex = 0;
-                    loadCurrentMonthWithSync();
+                    loadCurrentMonth();
                 } else {
                     showMessage('전월 데이터가 없거나 복사에 실패했습니다.', 'error', messageDiv);
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
             });
         }
         
-        // 멤버 추가
+        // =============================================================================
+        // 멤버 관리
+        // =============================================================================
         function addMember() {
             var name = document.getElementById('memberName').value.trim();
             var role = document.getElementById('memberRole').value;
@@ -1923,127 +507,45 @@
             
             fetch('/api/add_member', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: name,
-                    role: role
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, name: name, role: role })
             })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
                     showMessage('멤버가 성공적으로 추가되었습니다!', 'success', messageDiv);
                     document.getElementById('memberName').value = '';
-                    
-                    // 멤버 추가 후 전체 업데이트 (순서 유지)
-                    loadCurrentMonthWithSync();
+                    loadCurrentMonth();
                 } else {
                     showMessage('멤버 추가에 실패했습니다: ' + (data.error || '알 수 없는 오류'), 'error', messageDiv);
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
             });
         }
         
-        // 멤버 삭제
         function deleteMember(name) {
             if (!confirm("'" + name + "' 멤버를 정말 삭제하시겠습니까?")) {
                 return;
             }
             
-            // 현재 선택된 멤버 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-            
             fetch('/api/member/' + currentYear + '/' + currentMonth + '/' + encodeURIComponent(name), {
                 method: 'DELETE'
             })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    // 삭제된 멤버가 현재 선택된 멤버인 경우 첫 번째 멤버로 변경
-                    if (currentSelectedMemberName === name) {
-                        selectedMemberIndex = 0;
-                        loadCurrentMonthWithSync();
-                    } else {
-                        // 다른 멤버가 선택된 경우 선택 유지
-                        loadCurrentMonthWithSync(currentSelectedMemberName);
-                    }
+                    loadCurrentMonth();
                 } else {
                     alert('멤버 삭제에 실패했습니다.');
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 alert('네트워크 오류가 발생했습니다: ' + error);
             });
         }
         
-        // 역할 변경 완료 후 업데이트
-        function updateMemberRole() {
-            if (!editingMember) return;
-            
-            // 현재 선택된 멤버 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-            
-            var newRole = document.getElementById('newRole').value;
-            
-            fetch('/api/member_role', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: editingMember,
-                    role: newRole
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.success) {
-                    closeRoleModal();
-                    // 역할 변경 후 선택 유지하면서 업데이트
-                    loadCurrentMonthWithSync(currentSelectedMemberName);
-                } else {
-                    alert('역할 변경에 실패했습니다.');
-                }
-            })
-            .catch(function(error) {
-                alert('네트워크 오류가 발생했습니다: ' + error);
-            });
-        }
-        
-        // 멤버 관리와 출석 현황을 동기화하여 로드
-        function loadCurrentMonthWithSync(selectedMemberName) {
-            // 멤버 관리 먼저 로드
-            loadMemberManagement();
-            
-            // 출석 현황을 선택된 멤버와 함께 로드
-            if (selectedMemberName) {
-                loadAttendanceTableWithMemberSelection(selectedMemberName);
-            } else {
-                loadAttendanceTable();
-            }
-        }
-        
-        // 역할 변경 모달
         function openRoleModal(name, currentRole) {
             editingMember = name;
             document.getElementById('roleModalMemberName').textContent = name + '의 역할 변경';
@@ -2056,75 +558,84 @@
             editingMember = null;
         }
         
-        // 멤버 관리 로드
+        function updateMemberRole() {
+            if (!editingMember) return;
+            
+            var newRole = document.getElementById('newRole').value;
+            
+            fetch('/api/member_role', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, name: editingMember, role: newRole })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeRoleModal();
+                    loadCurrentMonth();
+                } else {
+                    alert('역할 변경에 실패했습니다.');
+                }
+            })
+            .catch(error => {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+        
         function loadMemberManagement() {
             var container = document.getElementById('memberManagement');
             container.innerHTML = '<div class="loading">멤버 목록을 불러오는 중입니다...</div>';
             
             fetch('/api/members/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 currentMembers = data;
                 displayMemberManagement(data);
             })
-            .catch(function(error) {
+            .catch(error => {
                 container.innerHTML = '<div class="error">멤버 목록을 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
             });
         }
         
-        // 멤버 관리 화면 표시
         function displayMemberManagement(members) {
             var container = document.getElementById('memberManagement');
             
             if (Object.keys(members).length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>멤버를 추가하거나 전월 데이터를 복사하세요.</p></div>';
                 return;
             }
             
-            // 멤버를 order 순으로 정렬
             var memberEntries = Object.keys(members);
-            memberEntries.sort(function(a, b) {
-                var orderA = members[a].order || 0;
-                var orderB = members[b].order || 0;
-                return orderA - orderB;
-            });
+            memberEntries.sort((a, b) => (members[a].order || 0) - (members[b].order || 0));
             
             var html = '<div class="member-management" id="sortable-members">';
             
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
+            memberEntries.forEach(name => {
                 var member = members[name];
-                
-                html += '<div class="member-card" data-member-name="' + name + '">';
-                html += '<div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>';
-                html += '<div class="member-info">';
-                html += '<div class="member-name">' + name + '</div>';
-                html += '<div class="member-role">' + member.role + '</div>';
-                html += '</div>';
-                html += '<div class="member-actions">';
-                html += '<button class="btn-warning" onclick="openRoleModal(\'' + name + '\', \'' + member.role + '\')">역할 변경</button>';
-                html += '<button class="btn-danger" onclick="deleteMember(\'' + name + '\')">삭제</button>';
-                html += '</div>';
-                html += '</div>';
-            }
+                html += `
+                    <div class="member-card" data-member-name="${name}">
+                        <div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>
+                        <div class="member-info">
+                            <div class="member-name">${name}</div>
+                            <div class="member-role">${member.role}</div>
+                        </div>
+                        <div class="member-actions">
+                            <button class="btn-warning" onclick="openRoleModal('${name}', '${member.role}')">역할 변경</button>
+                            <button class="btn-danger" onclick="deleteMember('${name}')">삭제</button>
+                        </div>
+                    </div>
+                `;
+            });
             
             html += '</div>';
             container.innerHTML = html;
             
-            // Sortable 초기화
-            setTimeout(function() {
-                initializeSortable();
-            }, 100);
+            setTimeout(initializeSortable, 100);
         }
         
-        // Sortable 초기화
         function initializeSortable() {
             var memberContainer = document.querySelector('#sortable-members');
-            
-            if (!memberContainer) return;
-            if (typeof Sortable === 'undefined') return;
+            if (!memberContainer || typeof Sortable === 'undefined') return;
             
             if (memberContainer.sortableInstance) {
                 memberContainer.sortableInstance.destroy();
@@ -2132,700 +643,172 @@
             
             memberContainer.sortableInstance = Sortable.create(memberContainer, {
                 animation: 150,
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
                 handle: '.drag-handle',
                 onEnd: function(evt) {
                     if (evt.oldIndex !== evt.newIndex) {
-                        updateMemberOrderByDrag(evt.oldIndex, evt.newIndex);
+                        updateMemberOrder(evt.oldIndex, evt.newIndex);
                     }
                 }
             });
         }
         
-        // 드래그로 순서 변경
-        function updateMemberOrderByDrag(oldIndex, newIndex) {
+        function updateMemberOrder(oldIndex, newIndex) {
             var memberNames = Object.keys(currentMembers);
-            memberNames.sort(function(a, b) {
-                var orderA = currentMembers[a].order || 0;
-                var orderB = currentMembers[b].order || 0;
-                return orderA - orderB;
-            });
+            memberNames.sort((a, b) => (currentMembers[a].order || 0) - (currentMembers[b].order || 0));
             
-            // 현재 선택된 멤버 이름 저장 (카드뷰용)
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-            
-            // 배열에서 요소 이동
             var movedMember = memberNames.splice(oldIndex, 1)[0];
             memberNames.splice(newIndex, 0, movedMember);
             
-            // 새로운 order 값들 생성
-            var orders = [];
-            for (var i = 0; i < memberNames.length; i++) {
-                orders.push({
-                    name: memberNames[i],
-                    order: i
-                });
-            }
+            var orders = memberNames.map((name, index) => ({ name: name, order: index }));
             
-            // 서버에 업데이트 요청
             fetch('/api/member_orders', {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    orders: orders
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, orders: orders })
             })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    // 멤버 관리와 출석 현황 모두 업데이트
-                    loadMemberManagement();
-                    
-                    // 출석 현황도 업데이트하되, 카드뷰에서 선택된 멤버 유지
-                    loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
+                    loadCurrentMonth();
                 } else {
                     alert('순서 변경에 실패했습니다.');
                     loadCurrentMonth();
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 alert('네트워크 오류가 발생했습니다: ' + error);
                 loadCurrentMonth();
             });
         }
         
-        // 선택된 멤버를 유지하면서 출석 테이블 로드
-        function loadAttendanceTableWithMemberSelection(selectedMemberName) {
-            var container = document.getElementById('attendanceTable');
-            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
-            
-            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                // Export용 데이터 저장
-                currentReportData = data;
-                
-                // 새로운 순서로 멤버 리스트 업데이트
-                var memberEntries = Object.keys(data.members || data);
-                memberEntries.sort(function(a, b) {
-                    var dataObj = data.members || data;
-                    var orderA = dataObj[a].order || 0;
-                    var orderB = dataObj[b].order || 0;
-                    return orderA - orderB;
-                });
-                
-                // 이전에 선택된 멤버의 새로운 인덱스 찾기
-                if (selectedMemberName && memberEntries.indexOf(selectedMemberName) !== -1) {
-                    selectedMemberIndex = memberEntries.indexOf(selectedMemberName);
-                } else {
-                    // 이전 선택이 없거나 해당 멤버가 없으면 첫 번째 멤버 선택
-                    selectedMemberIndex = 0;
-                }
-                
-                displayAttendanceTable(data, currentYear, currentMonth);
-            })
-            .catch(function(error) {
-                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
-            });
-        }
-        
-        // 출석 테이블 로드 - 서버 응답 디버깅 추가
+        // =============================================================================
+        // 출석 관리
+        // =============================================================================
         function loadAttendanceTable() {
             var container = document.getElementById('attendanceTable');
             container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
             
             fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                console.log('서버 응답 전체 데이터:', data);
-                
-                // 첫 번째 멤버의 데이터 구조 디버깅
-                var memberKeys = Object.keys(data.members || data);
-                if (memberKeys.length > 0) {
-                    var firstMember = memberKeys[0];
-                    var memberData = (data.members || data)[firstMember];
-                    console.log('첫 번째 멤버(' + firstMember + ') 데이터 구조:', memberData);
-                    console.log('attendance 객체:', memberData.attendance);
-                    console.log('extras 객체:', memberData.extras);
-                    
-                    // 기타 데이터 확인
-                    if (memberData.attendance) {
-                        console.log('attendance.extra1:', memberData.attendance.extra1);
-                        console.log('attendance.extra2:', memberData.attendance.extra2);
-                        console.log('attendance.extra3:', memberData.attendance.extra3);
-                    }
-                    if (memberData.extras) {
-                        console.log('extras.extra1:', memberData.extras.extra1);
-                        console.log('extras.extra2:', memberData.extras.extra2);
-                        console.log('extras.extra3:', memberData.extras.extra3);
-                    }
-                }
-                
-                // Export용 데이터 저장
+            .then(response => response.json())
+            .then(data => {
                 currentReportData = data;
-                displayAttendanceTable(data, currentYear, currentMonth);
+                displayAttendanceTable(data);
             })
-            .catch(function(error) {
-                console.error('데이터 로드 오류:', error);
+            .catch(error => {
                 container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
             });
         }
         
-        // 출석 테이블 표시 (기타 칼럼 포함)
-        function displayAttendanceTable(responseData, year, month) {
+        function displayAttendanceTable(responseData) {
             var container = document.getElementById('attendanceTable');
             var data = responseData.members || responseData;
             var dates = responseData.dates || [];
             
             if (Object.keys(data).length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>위의 "멤버 추가" 섹션에서 새 멤버를 추가하거나 "전월 멤버 복사" 버튼을 사용하세요.</p></div>';
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>멤버를 추가하거나 전월 데이터를 복사하세요.</p></div>';
                 return;
             }
             
-            // 멤버를 order 순으로 정렬
             var memberEntries = Object.keys(data);
-            memberEntries.sort(function(a, b) {
-                var orderA = data[a].order || 0;
-                var orderB = data[b].order || 0;
-                return orderA - orderB;
-            });
+            memberEntries.sort((a, b) => (data[a].order || 0) - (data[b].order || 0));
             
-            // 날짜가 없으면 첫 번째 멤버의 출석 데이터에서 추출
             var finalDates = dates;
             if (finalDates.length === 0 && memberEntries.length > 0) {
                 finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
             }
             
-            var html = '';
-            
-            // 현재 사용할 뷰 결정
-            var viewToUse = getCurrentView();
-            
-            // 뷰 토글 버튼 (PC와 모바일 모두 표시)
-            html += '<div class="view-toggle">';
-            
-            if (viewToUse === 'table') {
-                html += '<button id="tableViewBtn" class="active" onclick="switchToTableView()">📊 테이블 뷰</button>';
-                html += '<button id="cardViewBtn" onclick="switchToCardView()">📋 카드 뷰</button>';
-            } else {
-                html += '<button id="tableViewBtn" onclick="switchToTableView()">📊 테이블 뷰</button>';
-                html += '<button id="cardViewBtn" class="active" onclick="switchToCardView()">📋 카드 뷰</button>';
-            }
-            
-            html += '</div>';
-            
-            // 데스크톱 테이블 뷰
-            html += '<div class="desktop-view"' + (viewToUse === 'table' ? '' : ' style="display: none;"') + '>';
-            html += generateTableView(data, memberEntries, finalDates, year, month);
-            html += '</div>';
-            
-            // 모바일 카드 뷰
-            html += '<div class="mobile-view"' + (viewToUse === 'card' ? '' : ' style="display: none;"') + '>';
-            html += generateCardView(data, memberEntries, finalDates, year, month);
-            html += '</div>';
-            
-            // 범례 추가
-            html += '<div style="margin-top: 30px; padding: 25px; background: #f8f9fa; border-radius: 10px;">';
-            html += '<h3>📋 출석 조건 및 사용법</h3>';
-            html += '<ul style="list-style: none; margin: 15px 0;">';
-            html += '<li style="padding: 5px 0;">▶ <strong>운영진:</strong> 출석 조건 없음</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>';
-            html += '<li style="padding: 5px 0;">▶ <strong>기타1, 기타2, 기타3:</strong> 추가 점수 (총 합계에 포함)</li>';
-            html += '</ul>';
-            html += '<div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-top: 15px; border-radius: 0 8px 8px 0;">';
-            html += '<p style="margin: 5px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 기타 셀을 클릭하면 0/1이 토글됩니다</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>';
-            html += '<p style="margin: 5px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>';
-            if (isMobile()) {
-                html += '<p style="margin: 5px 0; color: #1565c0;">• 📱 모바일: 기본 카드 뷰, 멤버별 개별 확인</p>';
-            } else {
-                html += '<p style="margin: 5px 0; color: #1565c0;">• 🖥️ PC: 기본 테이블 뷰, 전체 한눈에 확인</p>';
-            }
-            html += '</div>';
-            html += '</div>';
-            
-            container.innerHTML = html;
-            
-            // 현재 뷰 상태 설정
-            currentView = viewToUse;
-        }
-        
-        // 테이블 뷰 생성 (기타 칼럼 포함)
-        function generateTableView(data, memberEntries, finalDates, year, month) {
-            var isMobile = window.innerWidth <= 768;
-            var html = '';
-            
-            if (isMobile && finalDates.length > 4) {
-                html += '<div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">📱 표를 좌우로 스크롤하여 모든 날짜를 확인하세요</div>';
-            }
-            
-            html += '<div class="table-container">';
-            html += '<table class="attendance-table">';
+            var html = '<div class="table-container"><table class="attendance-table">';
             
             // 헤더
             html += '<thead><tr>';
-            html += '<th style="min-width: 60px;">직책</th>';
-            html += '<th style="min-width: 80px;">성명</th>';
-            html += '<th style="min-width: 50px;">합계</th>';
+            html += '<th>직책</th><th>성명</th><th>합계</th>';
             
-            for (var i = 0; i < finalDates.length; i++) {
-                var date = finalDates[i];
+            finalDates.forEach(date => {
                 var dateObj = new Date(date);
                 var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
                 var weekday = weekdays[dateObj.getDay()];
                 var day = dateObj.getDate();
-                html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
-            }
-            html += '<th style="min-width: 50px;">' + '기타1' + '</th>';
-            html += '<th style="min-width: 50px;">' + '기타2' + '</th>';
-            html += '<th style="min-width: 50px;">' + '기타3' + '</th>';
-            // 기타 칼럼 헤더 추가
+                html += `<th>${currentMonth}월<br>${day}일<br>${weekday}</th>`;
+            });
             
+            html += '<th>기타1</th><th>기타2</th><th>기타3</th>';
             html += '</tr></thead>';
             
             // 바디
             html += '<tbody>';
-            for (var memberIndex = 0; memberIndex < memberEntries.length; memberIndex++) {
-                var name = memberEntries[memberIndex];
+            memberEntries.forEach(name => {
                 var info = data[name];
-                
-                if (!info || !info.stats) continue;
+                if (!info || !info.stats) return;
                 
                 var stats = info.stats;
-                var extras = info.extras || {};
                 var rowClass = stats.meets_requirement ? 'pass' : 'fail';
                 
-                html += '<tr class="' + rowClass + '">';
-                html += '<td><strong>' + (info.role || '미정') + '</strong></td>';
-                html += '<td><strong>' + name + '</strong></td>';
-                html += '<td><strong>' + (stats.total || 0) + '</strong></td>';
+                html += `<tr class="${rowClass}">`;
+                html += `<td><strong>${info.role || '미정'}</strong></td>`;
+                html += `<td><strong>${name}</strong></td>`;
+                html += `<td><strong>${stats.total || 0}</strong></td>`;
                 
-                for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
-                    var date = finalDates[dateIndex];
+                // 정규 날짜별 출석
+                finalDates.forEach(date => {
                     var attendance = info.attendance || {};
                     var status = attendance[date] || 0;
                     var cellClass = status === 1 ? 'present' : 'absent';
                     var displayText = status === 1 ? '1' : '0';
                     
-                    html += '<td class="attendance-cell ' + cellClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
-                    html += displayText;
-                    html += '</td>';
-                }
-                others = ['기타1','기타2','기타3']
-                for (var Index = 0;Index < 3;Index++) {
-                    var oth = others[Index];
-                    var attendance = info.attendance || {};
-                    var cellClass = status === 1 ? 'present' : 'absent';
-                    var displayText = status === 1 ? '1' : '0';
-
-                    html += '<td class="attendance-cell ' + cellClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + oth + '\', this)" title="' + name + ' - ' + oth + ' 클릭하여 변경">';
-                    html += displayText;
-                    html += '</td>';
-                }
+                    html += `<td class="attendance-cell ${cellClass}" onclick="toggleAttendance('${name}', '${date}', this)" title="${name} - ${date}">${displayText}</td>`;
+                });
                 
-                // // 기타 칼럼 추가 - 모든 가능한 데이터 소스에서 확인
-                // var attendance = info.attendance || {};
-                // var extras = info.extras || {};
+                // 기타 칼럼 - attendance에서만 가져오기
+                var attendance = info.attendance || {};
+                var extraAttendance = info.extraAttendance || {}; // 기존 데이터 호환성을 위해
                 
-                // // 다양한 경로에서 기타 데이터 찾기
-                // var extra1 = attendance.extra1 || extras.extra1 || attendance['extra1'] || extras['extra1'] || 0;
-                // var extra2 = attendance.extra2 || extras.extra2 || attendance['extra2'] || extras['extra2'] || 0;
-                // var extra3 = attendance.extra3 || extras.extra3 || attendance['extra3'] || extras['extra3'] || 0;
+                // attendance 우선, extraAttendance는 호환성을 위한 fallback
+                var extra1 = attendance.extra1 || extraAttendance.extra1 || 0;
+                var extra2 = attendance.extra2 || extraAttendance.extra2 || 0;
+                var extra3 = attendance.extra3 || extraAttendance.extra3 || 0;
                 
-                // console.log('멤버 ' + name + ' 기타 데이터:', {
-                //     extra1: extra1,
-                //     extra2: extra2,
-                //     extra3: extra3,
-                //     attendance: attendance,
-                //     extras: extras
-                // });
+                var extra1Class = (extra1 == 1) ? 'present' : 'absent';
+                var extra2Class = (extra2 == 1) ? 'present' : 'absent';
+                var extra3Class = (extra3 == 1) ? 'present' : 'absent';
                 
-                // var extra1Class = (extra1 == 1) ? 'present' : 'absent';
-                // var extra2Class = (extra2 == 1) ? 'present' : 'absent';
-                // var extra3Class = (extra3 == 1) ? 'present' : 'absent';
-                
-                // // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
-                // html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
-                // html += extra1;
-                // html += '</td>';
-                // html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
-                // html += extra2;
-                // html += '</td>';
-                // html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
-                // html += extra3;
-                // html += '</td>';
+                html += `<td class="attendance-cell ${extra1Class}" onclick="toggleAttendance('${name}', 'extra1', this)" title="${name} - 기타1">${extra1}</td>`;
+                html += `<td class="attendance-cell ${extra2Class}" onclick="toggleAttendance('${name}', 'extra2', this)" title="${name} - 기타2">${extra2}</td>`;
+                html += `<td class="attendance-cell ${extra3Class}" onclick="toggleAttendance('${name}', 'extra3', this)" title="${name} - 기타3">${extra3}</td>`;
                 
                 html += '</tr>';
-            }
+            });
             html += '</tbody></table></div>';
             
-            return html;
+            // 범례 추가
+            html += `
+                <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <h3>📋 출석 조건 및 사용법</h3>
+                    <ul style="list-style: none; margin: 10px 0;">
+                        <li style="padding: 3px 0;">▶ <strong>운영진:</strong> 출석 조건 없음</li>
+                        <li style="padding: 3px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>
+                        <li style="padding: 3px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>
+                        <li style="padding: 3px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>
+                        <li style="padding: 3px 0;">▶ <strong>기타1, 기타2, 기타3:</strong> 추가 점수 (총 합계에 포함)</li>
+                    </ul>
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 10px; margin-top: 10px; border-radius: 0 5px 5px 0;">
+                        <p style="margin: 3px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
         }
         
-        // 카드 뷰 생성 (기타 칼럼 포함) - 선택된 멤버만 표시
-        function generateCardView(data, memberEntries, finalDates, year, month) {
-            memberList = memberEntries; // 전역 변수에 저장
-            
-            var html = '';
-            
-            // 멤버 선택 드롭다운
-            html += '<div class="member-selector">';
-            html += '<label>👤 멤버 선택:</label>';
-            html += '<select id="memberSelect" onchange="changeMember()">';
-            for (var i = 0; i < memberEntries.length; i++) {
-                var name = memberEntries[i];
-                var selected = i === selectedMemberIndex ? ' selected' : '';
-                html += '<option value="' + i + '"' + selected + '>' + name + '</option>';
-            }
-            html += '</select>';
-            html += '</div>';
-            
-            // 네비게이션 버튼
-            html += '<div class="card-navigation">';
-            html += '<button class="nav-button" onclick="previousMember()" ' + (selectedMemberIndex <= 0 ? 'disabled' : '') + '>← 이전</button>';
-            html += '<div class="member-indicator">' + (selectedMemberIndex + 1) + ' / ' + memberEntries.length + '</div>';
-            html += '<button class="nav-button" onclick="nextMember()" ' + (selectedMemberIndex >= memberEntries.length - 1 ? 'disabled' : '') + '>다음 →</button>';
-            html += '</div>';
-            
-            // 선택된 멤버 카드 표시
-            html += '<div class="single-card-container">';
-            
-            if (memberEntries.length === 0) {
-                html += '<div class="no-member-selected">';
-                html += '<h3>등록된 멤버가 없습니다</h3>';
-                html += '<p>멤버를 추가해주세요.</p>';
-                html += '</div>';
-            } else if (selectedMemberIndex >= 0 && selectedMemberIndex < memberEntries.length) {
-                var name = memberEntries[selectedMemberIndex];
-                var info = data[name];
-                
-                if (info && info.stats) {
-                    var stats = info.stats;
-                    var extras = info.extras || {};
-                    var cardClass = stats.meets_requirement ? 'pass' : 'fail';
-                    
-                    html += '<div class="member-card-view ' + cardClass + '" style="width: 100%; max-width: 600px;">';
-                    
-                    // 멤버 헤더
-                    html += '<div class="member-header-mobile">';
-                    html += '<div class="member-name-mobile">' + name + '</div>';
-                    html += '<div class="member-role-mobile">' + (info.role || '미정') + '</div>';
-                    html += '</div>';
-                    
-                    // 통계
-                    html += '<div class="member-stats-mobile">';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">총 출석</div>';
-                    html += '<div class="stat-value">' + (stats.total || 0) + '회</div>';
-                    html += '</div>';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">수요일 출석</div>';
-                    html += '<div class="stat-value">' + (stats.wednesday || 0) + '회</div>';
-                    html += '</div>';
-                    html += '<div class="stat-item">';
-                    html += '<div class="stat-label">조건 충족</div>';
-                    html += '<div class="stat-value">' + (stats.meets_requirement ? '✅' : '❌') + '</div>';
-                    html += '</div>';
-                    html += '</div>';
-                    
-                    // 출석 그리드
-                    html += '<div class="attendance-grid-mobile">';
-                    for (var dateIndex = 0; dateIndex < finalDates.length; dateIndex++) {
-                        var date = finalDates[dateIndex];
-                        var dateObj = new Date(date);
-                        var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                        var weekday = weekdays[dateObj.getDay()];
-                        var day = dateObj.getDate();
-                        
-                        var attendance = info.attendance || {};
-                        var status = attendance[date] || 0;
-                        var itemClass = status === 1 ? 'present' : 'absent';
-                        var displayText = status === 1 ? '출석' : '불참';
-                        
-                        html += '<div class="attendance-item-mobile ' + itemClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + date + '\', this)" title="' + name + ' - ' + date + ' 클릭하여 변경">';
-                        html += '<div class="date-label-mobile">' + month + '/' + day + '<br>' + weekday + '</div>';
-                        html += '<div class="attendance-value-mobile">' + displayText + '</div>';
-                        html += '</div>';
-                    }
-                    
-                    // 기타 항목들 추가 - 모든 가능한 데이터 소스에서 확인
-                    var attendance = info.attendance || {};
-                    var extras = info.extras || {};
-                    
-                    // 다양한 경로에서 기타 데이터 찾기
-                    var extra1 = attendance.extra1 || extras.extra1 || attendance['extra1'] || extras['extra1'] || 0;
-                    var extra2 = attendance.extra2 || extras.extra2 || attendance['extra2'] || extras['extra2'] || 0;
-                    var extra3 = attendance.extra3 || extras.extra3 || attendance['extra3'] || extras['extra3'] || 0;
-                    
-                    var extra1Class = (extra1 == 1) ? 'present' : 'absent';
-                    var extra2Class = (extra2 == 1) ? 'present' : 'absent';
-                    var extra3Class = (extra3 == 1) ? 'present' : 'absent';
-                    
-                    // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
-                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
-                    html += '<div class="date-label-mobile">기타1</div>';
-                    html += '<div class="attendance-value-mobile">' + extra1 + '</div>';
-                    html += '</div>';
-                    
-                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
-                    html += '<div class="date-label-mobile">기타2</div>';
-                    html += '<div class="attendance-value-mobile">' + extra2 + '</div>';
-                    html += '</div>';
-                    
-                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
-                    html += '<div class="date-label-mobile">기타3</div>';
-                    html += '<div class="attendance-value-mobile">' + extra3 + '</div>';
-                    html += '</div>';
-                    
-                    html += '</div>';
-                    
-                    html += '</div>';
-                }
-            }
-            
-            html += '</div>';
-            
-            return html;
-        }
-        
-        // 기타 점수 토글 (테이블 뷰용) - data-value에서 현재 값 읽기
-        function toggleExtraValue(name, extraType, cell) {
-            var currentValue = parseInt(cell.getAttribute('data-value')) || 0;
-            var newValue = currentValue === 1 ? 0 : 1;
-            
-            console.log('토글: ' + name + ' ' + extraType + ' ' + currentValue + ' -> ' + newValue);
-            updateExtraValue(name, extraType, newValue, cell);
-        }
-        
-        // 기타 점수 토글 (모바일 카드 뷰용) - data-value에서 현재 값 읽기  
-        function toggleExtraValueMobile(name, extraType, cell) {
-            var currentValue = parseInt(cell.getAttribute('data-value')) || 0;
-            var newValue = currentValue === 1 ? 0 : 1;
-            
-            console.log('모바일 토글: ' + name + ' ' + extraType + ' ' + currentValue + ' -> ' + newValue);
-            updateExtraValue(name, extraType, newValue, cell);
-        }
-        
-        // 기타 점수 업데이트 서버 요청 - 디버깅 로그 추가
-        function updateExtraValue(name, extraType, newValue, element) {
-            console.log('서버 요청: ' + name + ' ' + extraType + ' = ' + newValue);
-            
-            fetch('/api/attendance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    year: currentYear,
-                    month: currentMonth,
-                    name: name,
-                    date: extraType, // 기타 항목을 date 필드로 전송
-                    status: newValue
-                })
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                console.log('서버 응답:', data);
-                if (data.success) {
-                    // 즉시 UI 업데이트 (서버 응답을 기다리지 않고)
-                    updateExtraUI(element, newValue);
-                    
-                    // 1초 후 전체 데이터 새로고침
-                    setTimeout(function() {
-                        console.log('전체 테이블 새로고침');
-                        var currentSelectedMemberName = null;
-                        if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                            currentSelectedMemberName = memberList[selectedMemberIndex];
-                        }
-                        
-                        if (currentSelectedMemberName) {
-                            loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
-                        } else {
-                            loadAttendanceTable();
-                        }
-                    }, 1000);
-                } else {
-                    alert('기타 점수 업데이트에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
-                }
-            })
-            .catch(function(error) {
-                console.error('네트워크 오류:', error);
-                alert('네트워크 오류가 발생했습니다: ' + error);
-            });
-        }
-        
-        // UI 즉시 업데이트 함수
-        function updateExtraUI(element, newValue) {
-            // data-value 업데이트
-            element.setAttribute('data-value', newValue);
-            
-            // 클래스 업데이트
-            element.classList.remove('present', 'absent');
-            element.classList.add(newValue === 1 ? 'present' : 'absent');
-            
-            // 텍스트 업데이트
-            var valueElement = element.querySelector('.attendance-value-mobile');
-            if (valueElement) {
-                valueElement.textContent = newValue;
-            } else {
-                element.textContent = newValue;
-            }
-            
-            console.log('UI 업데이트 완료: ' + newValue);
-        }
-        
-        // 멤버 네비게이션 함수들
-        function previousMember() {
-            if (selectedMemberIndex > 0) {
-                selectedMemberIndex--;
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-        
-        function nextMember() {
-            if (selectedMemberIndex < memberList.length - 1) {
-                selectedMemberIndex++;
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-        
-        function changeMember() {
-            var select = document.getElementById('memberSelect');
-            if (select) {
-                selectedMemberIndex = parseInt(select.value);
-                updateCardViewOnly(); // 카드뷰만 업데이트, 뷰 변경 안함
-            }
-        }
-        
-        // 카드 뷰만 업데이트 (뷰 변경 없이)
-        function updateCardViewOnly() {
-            // 현재 선택된 멤버 이름 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-            
-            // 카드뷰 부분만 업데이트
-            var mobileView = document.querySelector('.mobile-view');
-            if (mobileView && currentView === 'card') {
-                // 현재 데이터로 카드뷰 내용만 다시 생성
-                fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
-                    var memberEntries = Object.keys(data.members || data);
-                    memberEntries.sort(function(a, b) {
-                        var dataObj = data.members || data;
-                        var orderA = dataObj[a].order || 0;
-                        var orderB = dataObj[b].order || 0;
-                        return orderA - orderB;
-                    });
-                    
-                    var finalDates = data.dates || [];
-                    if (finalDates.length === 0 && memberEntries.length > 0) {
-                        finalDates = Object.keys((data.members || data)[memberEntries[0]].attendance || {}).sort();
-                    }
-                    
-                    var cardViewHTML = generateCardView(data.members || data, memberEntries, finalDates, currentYear, currentMonth);
-                    mobileView.innerHTML = cardViewHTML;
-                })
-                .catch(function(error) {
-                    console.error('카드뷰 업데이트 오류:', error);
-                });
-            }
-        }
-        
-        // 카드 뷰만 업데이트 (전체 테이블 다시 로드하지 않음)
-        function updateCardView() {
-            // 현재 선택된 멤버 이름 저장
-            var currentSelectedMemberName = null;
-            if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                currentSelectedMemberName = memberList[selectedMemberIndex];
-            }
-            
-            // 선택된 멤버를 유지하면서 출석 테이블 업데이트
-            loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
-        }
-        
-        // 뷰 전환 함수들
-        function switchToCardView() {
-            var desktopView = document.querySelector('.desktop-view');
-            var mobileView = document.querySelector('.mobile-view');
-            var cardBtn = document.getElementById('cardViewBtn');
-            var tableBtn = document.getElementById('tableViewBtn');
-            
-            if (desktopView) {
-                desktopView.style.display = 'none';
-                desktopView.classList.add('inactive');
-            }
-            if (mobileView) {
-                mobileView.style.display = 'block';
-                mobileView.classList.add('active');
-            }
-            if (cardBtn) cardBtn.classList.add('active');
-            if (tableBtn) tableBtn.classList.remove('active');
-            
-            currentView = 'card';
-            userSelectedView = 'card'; // 사용자가 직접 선택했음을 기록
-            
-            // 카드 뷰로 전환 시 첫 번째 멤버 선택 (인덱스가 범위를 벗어나는 경우만)
-            if (selectedMemberIndex < 0 || selectedMemberIndex >= memberList.length) {
-                selectedMemberIndex = 0;
-            }
-        }
-        
-        function switchToTableView() {
-            var desktopView = document.querySelector('.desktop-view');
-            var mobileView = document.querySelector('.mobile-view');
-            var cardBtn = document.getElementById('cardViewBtn');
-            var tableBtn = document.getElementById('tableViewBtn');
-            
-            if (desktopView) {
-                desktopView.style.display = 'block';
-                desktopView.classList.remove('inactive');
-            }
-            if (mobileView) {
-                mobileView.style.display = 'none';
-                mobileView.classList.remove('active');
-            }
-            if (tableBtn) tableBtn.classList.add('active');
-            if (cardBtn) cardBtn.classList.remove('active');
-            
-            currentView = 'table';
-            userSelectedView = 'table'; // 사용자가 직접 선택했음을 기록
-        }
-        
-        // 출석 토글
         function toggleAttendance(name, date, cell) {
             var currentStatus = cell.classList.contains('present') ? 1 : 0;
             var newStatus = currentStatus === 1 ? 0 : 1;
             
             fetch('/api/attendance', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     year: currentYear,
                     month: currentMonth,
@@ -2834,40 +817,174 @@
                     status: newStatus
                 })
             })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
                     // 즉시 셀 상태 업데이트
                     cell.classList.remove('present', 'absent');
                     cell.classList.add(newStatus === 1 ? 'present' : 'absent');
-                    
-                    // 텍스트 업데이트
-                    var valueElement = cell.querySelector('.attendance-value-mobile');
-                    if (valueElement) {
-                        valueElement.textContent = newStatus === 1 ? '출석' : '불참';
-                    } else {
-                        cell.textContent = newStatus === 1 ? '1' : '0';
-                    }
+                    cell.textContent = newStatus === 1 ? '1' : '0';
                     
                     // 통계 업데이트를 위해 테이블 다시 로드
-                    setTimeout(function() {
-                        loadAttendanceTable();
-                    }, 100);
+                    setTimeout(() => loadAttendanceTable(), 100);
                 } else {
                     alert('출석 정보 업데이트에 실패했습니다.');
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 alert('네트워크 오류가 발생했습니다: ' + error);
             });
         }
         
-        // 메시지 표시
+        // =============================================================================
+        // 데이터 내보내기
+        // =============================================================================
+        function exportToExcel() {
+            if (!currentReportData) {
+                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
+                return;
+            }
+            
+            try {
+                var wb = XLSX.utils.book_new();
+                var wsData = generateExcelData(currentReportData);
+                var ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 열 너비 설정
+                var colWidths = [
+                    { wch: 12 }, // 직책
+                    { wch: 15 }, // 성명
+                    { wch: 8 },  // 합계
+                ];
+                
+                var dates = currentReportData.dates || [];
+                for (var i = 0; i < dates.length; i++) {
+                    colWidths.push({ wch: 10 });
+                }
+                colWidths.push({ wch: 8 }, { wch: 8 }, { wch: 8 }); // 기타1,2,3
+                
+                ws['!cols'] = colWidths;
+                XLSX.utils.book_append_sheet(wb, ws, "출석현황");
+                
+                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.xlsx';
+                XLSX.writeFile(wb, fileName);
+                
+                showMessage('Excel 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
+            } catch (error) {
+                showMessage('Excel 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
+            }
+        }
+        
+        function exportToCSV() {
+            if (!currentReportData) {
+                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
+                return;
+            }
+            
+            try {
+                var csvContent = generateCSVContent(currentReportData);
+                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.csv';
+                downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+                
+                showMessage('CSV 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
+            } catch (error) {
+                showMessage('CSV 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
+            }
+        }
+        
+        function generateExcelData(reportData) {
+            var data = reportData.members || reportData;
+            var dates = reportData.dates || [];
+            
+            var memberEntries = Object.keys(data);
+            memberEntries.sort((a, b) => (data[a].order || 0) - (data[b].order || 0));
+            
+            var result = [];
+            
+            // 헤더 행
+            var header = ['직책', '성명', '합계'];
+            dates.forEach(date => {
+                var dateObj = new Date(date);
+                var month = dateObj.getMonth() + 1;
+                var day = dateObj.getDate();
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                header.push(month + '/' + day + '(' + weekday + ')');
+            });
+            header.push('기타1', '기타2', '기타3');
+            result.push(header);
+            
+            // 데이터 행
+            memberEntries.forEach(name => {
+                var info = data[name];
+                if (!info || !info.stats) return;
+                
+                var row = [
+                    info.role || '미정',
+                    name,
+                    info.stats.total || 0
+                ];
+                
+                dates.forEach(date => {
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    row.push(status === 1 ? '출석' : '불참');
+                });
+                
+                var attendance = info.attendance || {};
+                
+                var extra1 = attendance.extra1 || 0;
+                var extra2 = attendance.extra2 || 0;
+                var extra3 = attendance.extra3 || 0;
+                
+                row.push(extra1, extra2, extra3);
+                result.push(row);
+            });
+            
+            return result;
+        }
+        
+        function generateCSVContent(reportData) {
+            var excelData = generateExcelData(reportData);
+            var csvContent = '';
+            
+            excelData.forEach(row => {
+                var csvRow = row.map(cell => {
+                    var cellStr = String(cell);
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                        cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
+                    }
+                    return cellStr;
+                }).join(',');
+                
+                csvContent += csvRow + '\n';
+            });
+            
+            return '\uFEFF' + csvContent; // UTF-8 BOM 추가
+        }
+        
+        function downloadFile(content, fileName, mimeType) {
+            var blob = new Blob([content], { type: mimeType });
+            var url = window.URL.createObjectURL(blob);
+            
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // =============================================================================
+        // 유틸리티 함수
+        // =============================================================================
         function showMessage(message, type, container) {
             container.innerHTML = '<div class="' + type + '">' + message + '</div>';
-            setTimeout(function() {
+            setTimeout(() => {
                 container.innerHTML = '';
             }, 5000);
         }
