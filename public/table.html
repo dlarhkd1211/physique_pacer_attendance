@@ -114,7 +114,7 @@
             -webkit-overflow-scrolling: touch;
         }
         
-        /* 고정 칼럼 (직책, 성명, 합계, 기타1-3) */
+        /* 고정 칼럼 (직책, 성명, 합계) */
         .fixed-columns {
             position: sticky;
             left: 0;
@@ -199,23 +199,6 @@
             background: white;
             color: #333;
             border: 2px solid #dee2e6;
-        }
-        
-        /* 기타 칼럼 스타일 */
-        .extra-column {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-            color: white !important;
-        }
-        
-        .extra-attendance {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-            color: white;
-        }
-        
-        .extra-attendance.absent {
-            background: #fff3e0;
-            color: #e65100;
-            border: 2px solid #ffcc02;
         }
         
         .pass {
@@ -438,7 +421,6 @@
                         <option value="12">12월</option>
                     </select>
                     <button onclick="loadTable()">🔍 조회</button>
-<!--                     <a href="/index.html" class="btn-link">✏️ 관리 페이지</a> -->
                 </div>
             </div>
             
@@ -451,19 +433,10 @@
                 
                 <!-- 정보 박스 -->
                 <div class="info-box">
-<!--                     <h3>📋 출석 조건</h3>
-                    <ul>
-                        <li><strong>운영진:</strong> 출석 조건 없음</li>
-                        <li><strong>페이서:</strong> 월 3회 이상 출석</li>
-                        <li><strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>
-                        <li><strong>포토:</strong> 월 1회 이상 출석</li>
-                    </ul>
-                    <br> -->
                     <p><strong>💡 범례:</strong></p>
                     <p>• 초록색 배경: 출석 조건 충족 ✅</p>
                     <p>• 빨간색 배경: 출석 조건 미충족 ❌</p>
                     <p>• 초록색 셀: 출석(1), 흰색 셀: 불참(0)</p>
-                    <p>• 오렌지색 셀: 기타 참여 활동 🟠</p>
                     <p>• 📱 모바일: 직책/성명/합계 칼럼은 고정, 날짜와 기타 칼럼은 스크롤하여 확인</p>
                 </div>
                 
@@ -591,10 +564,10 @@
                 html += '<th>' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
             }
             
-            // 기타 칼럼들 (맨 오른쪽)
-            html += '<th class="extra-column">기타1</th>';
-            html += '<th class="extra-column">기타2</th>';
-            html += '<th class="extra-column">기타3</th>';
+            // 기타 칼럼들 (맨 오른쪽) - 일반 날짜와 동일한 스타일
+            html += '<th>기타1</th>';
+            html += '<th>기타2</th>';
+            html += '<th>기타3</th>';
             html += '</tr></thead>';
             
             html += '<tbody>';
@@ -622,18 +595,28 @@
                     html += '</td>';
                 }
                 
-                // 기타 참여 칼럼들 (맨 오른쪽)
-                var extraAttendance = info.extraAttendance || {};
-                for (var extraIndex = 1; extraIndex <= 3; extraIndex++) {
-                    var extraKey = 'extra' + extraIndex;
-                    var extraStatus = extraAttendance[extraKey] || 0;
-                    var extraClass = extraStatus === 1 ? 'extra-attendance' : 'extra-attendance absent';
-                    var extraDisplayText = extraStatus === 1 ? '1' : '0';
-                    
-                    html += '<td class="attendance-cell ' + extraClass + '" title="' + name + ' - ' + extraKey + '">';
-                    html += extraDisplayText;
-                    html += '</td>';
-                }
+                // 기타 참여 칼럼들 (맨 오른쪽) - 일반 출석과 동일한 클래스 사용
+                var attendance = info.attendance || {};
+                var extras = info.extras || {};
+                
+                // 다양한 경로에서 기타 데이터 찾기
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                
+                var extra1Class = (extra1 == 1) ? 'present' : 'absent';
+                var extra2Class = (extra2 == 1) ? 'present' : 'absent';
+                var extra3Class = (extra3 == 1) ? 'present' : 'absent';
+                
+                html += '<td class="attendance-cell ' + extra1Class + '" title="' + name + ' - 기타1">';
+                html += extra1;
+                html += '</td>';
+                html += '<td class="attendance-cell ' + extra2Class + '" title="' + name + ' - 기타2">';
+                html += extra2;
+                html += '</td>';
+                html += '<td class="attendance-cell ' + extra3Class + '" title="' + name + ' - 기타3">';
+                html += extra3;
+                html += '</td>';
                 
                 html += '</tr>';
             }
