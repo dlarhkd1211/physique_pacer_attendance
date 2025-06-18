@@ -33,7 +33,8 @@
       },
       "order": 2,
       "extraAttendance": {
-        "extra1": 1
+        "extra1": 1,
+        "extra2": 1
       }
     },
     "서대용": {
