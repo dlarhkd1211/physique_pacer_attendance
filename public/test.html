@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>페이서 출석 관리 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        input, select, button {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+        .btn-danger { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+        .btn-warning { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; }
+        .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+        
+        /* 테이블 스타일 */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 800px;
+        }
+        
+        .attendance-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            min-width: 60px;
+        }
+        
+        .attendance-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+        
+        .attendance-cell {
+            cursor: pointer;
+            font-weight: 600;
+            border-radius: 4px;
+            padding: 8px;
+            min-width: 40px;
+            min-height: 40px;
+            transition: all 0.2s ease;
+        }
+        
+        .attendance-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .present {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+        
+        .absent {
+            background: white;
+            color: #333;
+            border: 2px solid #dee2e6;
+        }
+        
+        .pass { background-color: #e8f5e8; color: #2e7d32; }
+        .fail { background-color: #ffebee; color: #c62828; }
+        
+        /* 멤버 관리 */
+        .member-management {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .member-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            position: relative;
+        }
+        
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: 40px;
+        }
+        
+        .member-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            min-width: 100px;
+        }
+        
+        .member-role {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .member-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .member-actions button {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        
+        .drag-handle {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: move;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        /* 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover { color: #000; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { padding: 20px 15px; }
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 15px; }
+            .section { padding: 15px; margin-bottom: 20px; }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            input, select, button {
+                width: 100%;
+                padding: 12px;
+                font-size: 16px;
+            }
+            
+            .member-card {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .member-info {
+                margin-left: 0;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .member-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .drag-handle {
+                position: static;
+                transform: none;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 페이서 출석 관리 시스템</h1>
+            <p>피지크 페이서 출석 관리자 페이지</p>
+        </div>
+        
+        <div class="content">
+            <!-- 월 선택 -->
+            <div class="section">
+                <h2>📅 월 선택</h2>
+                <div class="controls">
+                    <label>년도:</label>
+                    <input type="number" id="year" value="2024" min="2020" max="2030">
+                    <label>월:</label>
+                    <select id="month">
+                        <option value="1">1월</option>
+                        <option value="2">2월</option>
+                        <option value="3">3월</option>
+                        <option value="4">4월</option>
+                        <option value="5">5월</option>
+                        <option value="6" selected>6월</option>
+                        <option value="7">7월</option>
+                        <option value="8">8월</option>
+                        <option value="9">9월</option>
+                        <option value="10">10월</option>
+                        <option value="11">11월</option>
+                        <option value="12">12월</option>
+                    </select>
+                    <button onclick="loadCurrentMonth()">조회</button>
+                    <button class="btn-success" onclick="copyFromPreviousMonth()">전월 복사</button>
+                </div>
+                <div id="monthMessage"></div>
+            </div>
+            
+            <!-- 멤버 추가 -->
+            <div class="section">
+                <h2>👥 멤버 추가</h2>
+                <div class="controls">
+                    <input type="text" id="memberName" placeholder="이름을 입력하세요">
+                    <select id="memberRole">
+                        <option value="운영진">운영진</option>
+                        <option value="페이서">페이서</option>
+                        <option value="페이서 강남">페이서 강남</option>
+                        <option value="포토">포토</option>
+                    </select>
+                    <button onclick="addMember()">멤버 추가</button>
+                </div>
+                <div id="memberMessage"></div>
+            </div>
+            
+            <!-- 데이터 내보내기 -->
+            <div class="section">
+                <h2>📁 데이터 내보내기</h2>
+                <div class="controls">
+                    <button class="btn-info" onclick="exportToExcel()">📊 Excel</button>
+                    <button class="btn-info" onclick="exportToCSV()">📋 CSV</button>
+                </div>
+                <div id="exportMessage"></div>
+            </div>
+            
+            <!-- 출석 현황 -->
+            <div class="section">
+                <h2>📊 출석 현황</h2>
+                <div id="attendanceTable">
+                    <div class="loading">출석 데이터를 불러오는 중입니다...</div>
+                </div>
+            </div>
+            
+            <!-- 멤버 관리 -->
+            <div class="section">
+                <h2>👤 멤버 관리</h2>
+                <div id="memberManagement">
+                    <div class="loading">멤버 목록을 불러오는 중입니다...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 역할 변경 모달 -->
+    <div id="roleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>역할 변경</h3>
+                <span class="close" onclick="closeRoleModal()">&times;</span>
+            </div>
+            <div>
+                <p id="roleModalMemberName"></p>
+                <select id="newRole">
+                    <option value="운영진">운영진</option>
+                    <option value="페이서">페이서</option>
+                    <option value="페이서 강남">페이서 강남</option>
+                    <option value="포토">포토</option>
+                </select>
+                <div style="margin-top: 15px;">
+                    <button onclick="updateMemberRole()">변경</button>
+                    <button class="btn-secondary" onclick="closeRoleModal()">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================================================
+        // 전역 변수
+        // =============================================================================
+        var currentYear = 2024;
+        var currentMonth = 6;
+        var currentMembers = {};
+        var editingMember = null;
+        var currentReportData = null;
+        
+        // =============================================================================
+        // 초기화
+        // =============================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            var currentDate = new Date();
+            currentYear = currentDate.getFullYear();
+            currentMonth = currentDate.getMonth() + 1;
+            
+            document.getElementById('year').value = currentYear;
+            document.getElementById('month').value = currentMonth;
+            
+            // Enter 키 처리
+            document.getElementById('memberName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addMember();
+                }
+            });
+            
+            // 년도/월 변경 시 자동 조회
+            document.getElementById('year').addEventListener('change', loadCurrentMonth);
+            document.getElementById('month').addEventListener('change', loadCurrentMonth);
+            
+            loadCurrentMonth();
+        });
+        
+        // =============================================================================
+        // 데이터 로드 및 관리
+        // =============================================================================
+        function loadCurrentMonth() {
+            currentYear = parseInt(document.getElementById('year').value);
+            currentMonth = parseInt(document.getElementById('month').value);
+            
+            loadMemberManagement();
+            loadAttendanceTable();
+        }
+        
+        function copyFromPreviousMonth() {
+            var messageDiv = document.getElementById('monthMessage');
+            
+            fetch('/api/copy_previous_month', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('전월 멤버를 성공적으로 복사했습니다!', 'success', messageDiv);
+                    loadCurrentMonth();
+                } else {
+                    showMessage('전월 데이터가 없거나 복사에 실패했습니다.', 'error', messageDiv);
+                }
+            })
+            .catch(error => {
+                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
+            });
+        }
+        
+        // =============================================================================
+        // 멤버 관리
+        // =============================================================================
+        function addMember() {
+            var name = document.getElementById('memberName').value.trim();
+            var role = document.getElementById('memberRole').value;
+            var messageDiv = document.getElementById('memberMessage');
+            
+            if (!name) {
+                showMessage('이름을 입력해주세요.', 'error', messageDiv);
+                return;
+            }
+            
+            fetch('/api/add_member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, name: name, role: role })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('멤버가 성공적으로 추가되었습니다!', 'success', messageDiv);
+                    document.getElementById('memberName').value = '';
+                    loadCurrentMonth();
+                } else {
+                    showMessage('멤버 추가에 실패했습니다: ' + (data.error || '알 수 없는 오류'), 'error', messageDiv);
+                }
+            })
+            .catch(error => {
+                showMessage('네트워크 오류가 발생했습니다: ' + error, 'error', messageDiv);
+            });
+        }
+        
+        function deleteMember(name) {
+            if (!confirm("'" + name + "' 멤버를 정말 삭제하시겠습니까?")) {
+                return;
+            }
+            
+            fetch('/api/member/' + currentYear + '/' + currentMonth + '/' + encodeURIComponent(name), {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCurrentMonth();
+                } else {
+                    alert('멤버 삭제에 실패했습니다.');
+                }
+            })
+            .catch(error => {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+        
+        function openRoleModal(name, currentRole) {
+            editingMember = name;
+            document.getElementById('roleModalMemberName').textContent = name + '의 역할 변경';
+            document.getElementById('newRole').value = currentRole;
+            document.getElementById('roleModal').style.display = 'block';
+        }
+        
+        function closeRoleModal() {
+            document.getElementById('roleModal').style.display = 'none';
+            editingMember = null;
+        }
+        
+        function updateMemberRole() {
+            if (!editingMember) return;
+            
+            var newRole = document.getElementById('newRole').value;
+            
+            fetch('/api/member_role', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, name: editingMember, role: newRole })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeRoleModal();
+                    loadCurrentMonth();
+                } else {
+                    alert('역할 변경에 실패했습니다.');
+                }
+            })
+            .catch(error => {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+        
+        function loadMemberManagement() {
+            var container = document.getElementById('memberManagement');
+            container.innerHTML = '<div class="loading">멤버 목록을 불러오는 중입니다...</div>';
+            
+            fetch('/api/members/' + currentYear + '/' + currentMonth)
+            .then(response => response.json())
+            .then(data => {
+                currentMembers = data;
+                displayMemberManagement(data);
+            })
+            .catch(error => {
+                container.innerHTML = '<div class="error">멤버 목록을 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
+            });
+        }
+        
+        function displayMemberManagement(members) {
+            var container = document.getElementById('memberManagement');
+            
+            if (Object.keys(members).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>멤버를 추가하거나 전월 데이터를 복사하세요.</p></div>';
+                return;
+            }
+            
+            var memberEntries = Object.keys(members);
+            memberEntries.sort((a, b) => (members[a].order || 0) - (members[b].order || 0));
+            
+            var html = '<div class="member-management" id="sortable-members">';
+            
+            memberEntries.forEach(name => {
+                var member = members[name];
+                html += `
+                    <div class="member-card" data-member-name="${name}">
+                        <div class="drag-handle" title="드래그하여 순서 변경">⋮⋮</div>
+                        <div class="member-info">
+                            <div class="member-name">${name}</div>
+                            <div class="member-role">${member.role}</div>
+                        </div>
+                        <div class="member-actions">
+                            <button class="btn-warning" onclick="openRoleModal('${name}', '${member.role}')">역할 변경</button>
+                            <button class="btn-danger" onclick="deleteMember('${name}')">삭제</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            setTimeout(initializeSortable, 100);
+        }
+        
+        function initializeSortable() {
+            var memberContainer = document.querySelector('#sortable-members');
+            if (!memberContainer || typeof Sortable === 'undefined') return;
+            
+            if (memberContainer.sortableInstance) {
+                memberContainer.sortableInstance.destroy();
+            }
+            
+            memberContainer.sortableInstance = Sortable.create(memberContainer, {
+                animation: 150,
+                handle: '.drag-handle',
+                onEnd: function(evt) {
+                    if (evt.oldIndex !== evt.newIndex) {
+                        updateMemberOrder(evt.oldIndex, evt.newIndex);
+                    }
+                }
+            });
+        }
+        
+        function updateMemberOrder(oldIndex, newIndex) {
+            var memberNames = Object.keys(currentMembers);
+            memberNames.sort((a, b) => (currentMembers[a].order || 0) - (currentMembers[b].order || 0));
+            
+            var movedMember = memberNames.splice(oldIndex, 1)[0];
+            memberNames.splice(newIndex, 0, movedMember);
+            
+            var orders = memberNames.map((name, index) => ({ name: name, order: index }));
+            
+            fetch('/api/member_orders', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: currentYear, month: currentMonth, orders: orders })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCurrentMonth();
+                } else {
+                    alert('순서 변경에 실패했습니다.');
+                    loadCurrentMonth();
+                }
+            })
+            .catch(error => {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+                loadCurrentMonth();
+            });
+        }
+        
+        // =============================================================================
+        // 출석 관리
+        // =============================================================================
+        function loadAttendanceTable() {
+            var container = document.getElementById('attendanceTable');
+            container.innerHTML = '<div class="loading">출석 데이터를 불러오는 중입니다...</div>';
+            
+            fetch('/api/monthly_report/' + currentYear + '/' + currentMonth)
+            .then(response => response.json())
+            .then(data => {
+                currentReportData = data;
+                displayAttendanceTable(data);
+            })
+            .catch(error => {
+                container.innerHTML = '<div class="error">데이터를 불러오는 중 오류가 발생했습니다: ' + error + '</div>';
+            });
+        }
+        
+        function displayAttendanceTable(responseData) {
+            var container = document.getElementById('attendanceTable');
+            var data = responseData.members || responseData;
+            var dates = responseData.dates || [];
+            
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>등록된 멤버가 없습니다</h3><p>멤버를 추가하거나 전월 데이터를 복사하세요.</p></div>';
+                return;
+            }
+            
+            var memberEntries = Object.keys(data);
+            memberEntries.sort((a, b) => (data[a].order || 0) - (data[b].order || 0));
+            
+            var finalDates = dates;
+            if (finalDates.length === 0 && memberEntries.length > 0) {
+                finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
+            }
+            
+            var html = '<div class="table-container"><table class="attendance-table">';
+            
+            // 헤더
+            html += '<thead><tr>';
+            html += '<th>직책</th><th>성명</th><th>합계</th>';
+            
+            finalDates.forEach(date => {
+                var dateObj = new Date(date);
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                var day = dateObj.getDate();
+                html += `<th>${currentMonth}월<br>${day}일<br>${weekday}</th>`;
+            });
+            
+            html += '<th>기타1</th><th>기타2</th><th>기타3</th>';
+            html += '</tr></thead>';
+            
+            // 바디
+            html += '<tbody>';
+            memberEntries.forEach(name => {
+                var info = data[name];
+                if (!info || !info.stats) return;
+                
+                var stats = info.stats;
+                var rowClass = stats.meets_requirement ? 'pass' : 'fail';
+                
+                html += `<tr class="${rowClass}">`;
+                html += `<td><strong>${info.role || '미정'}</strong></td>`;
+                html += `<td><strong>${name}</strong></td>`;
+                html += `<td><strong>${stats.total || 0}</strong></td>`;
+                
+                // 정규 날짜별 출석
+                finalDates.forEach(date => {
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    var cellClass = status === 1 ? 'present' : 'absent';
+                    var displayText = status === 1 ? '1' : '0';
+                    
+                    html += `<td class="attendance-cell ${cellClass}" onclick="toggleAttendance('${name}', '${date}', this)" title="${name} - ${date}">${displayText}</td>`;
+                });
+                
+                // 기타 칼럼
+                var attendance = info.attendance || {};
+                var extras = info.extras || {};
+                
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                
+                var extra1Class = (extra1 == 1) ? 'present' : 'absent';
+                var extra2Class = (extra2 == 1) ? 'present' : 'absent';
+                var extra3Class = (extra3 == 1) ? 'present' : 'absent';
+                
+                html += `<td class="attendance-cell ${extra1Class}" onclick="toggleAttendance('${name}', 'extra1', this)" title="${name} - 기타1">${extra1}</td>`;
+                html += `<td class="attendance-cell ${extra2Class}" onclick="toggleAttendance('${name}', 'extra2', this)" title="${name} - 기타2">${extra2}</td>`;
+                html += `<td class="attendance-cell ${extra3Class}" onclick="toggleAttendance('${name}', 'extra3', this)" title="${name} - 기타3">${extra3}</td>`;
+                
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            
+            // 범례 추가
+            html += `
+                <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <h3>📋 출석 조건 및 사용법</h3>
+                    <ul style="list-style: none; margin: 10px 0;">
+                        <li style="padding: 3px 0;">▶ <strong>운영진:</strong> 출석 조건 없음</li>
+                        <li style="padding: 3px 0;">▶ <strong>페이서:</strong> 월 3회 이상 출석</li>
+                        <li style="padding: 3px 0;">▶ <strong>페이서 강남:</strong> 월 3회 이상 출석 (그 중 수요일 2회 이상)</li>
+                        <li style="padding: 3px 0;">▶ <strong>포토:</strong> 월 1회 이상 출석</li>
+                        <li style="padding: 3px 0;">▶ <strong>기타1, 기타2, 기타3:</strong> 추가 점수 (총 합계에 포함)</li>
+                    </ul>
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 10px; margin-top: 10px; border-radius: 0 5px 5px 0;">
+                        <p style="margin: 3px 0; color: #1565c0;"><strong>💡 사용법:</strong></p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleAttendance(name, date, cell) {
+            var currentStatus = cell.classList.contains('present') ? 1 : 0;
+            var newStatus = currentStatus === 1 ? 0 : 1;
+            
+            fetch('/api/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    year: currentYear,
+                    month: currentMonth,
+                    name: name,
+                    date: date,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 즉시 셀 상태 업데이트
+                    cell.classList.remove('present', 'absent');
+                    cell.classList.add(newStatus === 1 ? 'present' : 'absent');
+                    cell.textContent = newStatus === 1 ? '1' : '0';
+                    
+                    // 통계 업데이트를 위해 테이블 다시 로드
+                    setTimeout(() => loadAttendanceTable(), 100);
+                } else {
+                    alert('출석 정보 업데이트에 실패했습니다.');
+                }
+            })
+            .catch(error => {
+                alert('네트워크 오류가 발생했습니다: ' + error);
+            });
+        }
+        
+        // =============================================================================
+        // 데이터 내보내기
+        // =============================================================================
+        function exportToExcel() {
+            if (!currentReportData) {
+                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
+                return;
+            }
+            
+            try {
+                var wb = XLSX.utils.book_new();
+                var wsData = generateExcelData(currentReportData);
+                var ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 열 너비 설정
+                var colWidths = [
+                    { wch: 12 }, // 직책
+                    { wch: 15 }, // 성명
+                    { wch: 8 },  // 합계
+                ];
+                
+                var dates = currentReportData.dates || [];
+                for (var i = 0; i < dates.length; i++) {
+                    colWidths.push({ wch: 10 });
+                }
+                colWidths.push({ wch: 8 }, { wch: 8 }, { wch: 8 }); // 기타1,2,3
+                
+                ws['!cols'] = colWidths;
+                XLSX.utils.book_append_sheet(wb, ws, "출석현황");
+                
+                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.xlsx';
+                XLSX.writeFile(wb, fileName);
+                
+                showMessage('Excel 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
+            } catch (error) {
+                showMessage('Excel 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
+            }
+        }
+        
+        function exportToCSV() {
+            if (!currentReportData) {
+                showMessage('먼저 출석 데이터를 조회해주세요.', 'error', document.getElementById('exportMessage'));
+                return;
+            }
+            
+            try {
+                var csvContent = generateCSVContent(currentReportData);
+                var fileName = currentYear + '년_' + currentMonth + '월_출석현황.csv';
+                downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+                
+                showMessage('CSV 파일이 성공적으로 다운로드되었습니다!', 'success', document.getElementById('exportMessage'));
+            } catch (error) {
+                showMessage('CSV 파일 생성 중 오류가 발생했습니다: ' + error.message, 'error', document.getElementById('exportMessage'));
+            }
+        }
+        
+        function generateExcelData(reportData) {
+            var data = reportData.members || reportData;
+            var dates = reportData.dates || [];
+            
+            var memberEntries = Object.keys(data);
+            memberEntries.sort((a, b) => (data[a].order || 0) - (data[b].order || 0));
+            
+            var result = [];
+            
+            // 헤더 행
+            var header = ['직책', '성명', '합계'];
+            dates.forEach(date => {
+                var dateObj = new Date(date);
+                var month = dateObj.getMonth() + 1;
+                var day = dateObj.getDate();
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                header.push(month + '/' + day + '(' + weekday + ')');
+            });
+            header.push('기타1', '기타2', '기타3');
+            result.push(header);
+            
+            // 데이터 행
+            memberEntries.forEach(name => {
+                var info = data[name];
+                if (!info || !info.stats) return;
+                
+                var row = [
+                    info.role || '미정',
+                    name,
+                    info.stats.total || 0
+                ];
+                
+                dates.forEach(date => {
+                    var attendance = info.attendance || {};
+                    var status = attendance[date] || 0;
+                    row.push(status === 1 ? '출석' : '불참');
+                });
+                
+                var attendance = info.attendance || {};
+                var extras = info.extras || {};
+                
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                
+                row.push(extra1, extra2, extra3);
+                result.push(row);
+            });
+            
+            return result;
+        }
+        
+        function generateCSVContent(reportData) {
+            var excelData = generateExcelData(reportData);
+            var csvContent = '';
+            
+            excelData.forEach(row => {
+                var csvRow = row.map(cell => {
+                    var cellStr = String(cell);
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                        cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
+                    }
+                    return cellStr;
+                }).join(',');
+                
+                csvContent += csvRow + '\n';
+            });
+            
+            return '\uFEFF' + csvContent; // UTF-8 BOM 추가
+        }
+        
+        function downloadFile(content, fileName, mimeType) {
+            var blob = new Blob([content], { type: mimeType });
+            var url = window.URL.createObjectURL(blob);
+            
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // =============================================================================
+        // 유틸리티 함수
+        // =============================================================================
+        function showMessage(message, type, container) {
+            container.innerHTML = '<div class="' + type + '">' + message + '</div>';
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            var modal = document.getElementById('roleModal');
+            if (event.target === modal) {
+                closeRoleModal();
+            }
+        };
+    </script>
+</body>
+</html>
