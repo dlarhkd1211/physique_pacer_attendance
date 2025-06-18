@@ -758,12 +758,14 @@
                     html += `<td class="attendance-cell ${cellClass}" onclick="toggleAttendance('${name}', '${date}', this)" title="${name} - ${date}">${displayText}</td>`;
                 });
                 
-                // 기타 칼럼 - 모든 기타 항목을 동일한 클래스로 처리
+                // 기타 칼럼 - attendance에서만 가져오기
                 var attendance = info.attendance || {};
+                var extraAttendance = info.extraAttendance || {}; // 기존 데이터 호환성을 위해
                 
-                var extra1 = attendance.extra1 || 0;
-                var extra2 = attendance.extra2 || 0;
-                var extra3 = attendance.extra3 || 0;
+                // attendance 우선, extraAttendance는 호환성을 위한 fallback
+                var extra1 = attendance.extra1 || extraAttendance.extra1 || 0;
+                var extra2 = attendance.extra2 || extraAttendance.extra2 || 0;
+                var extra3 = attendance.extra3 || extraAttendance.extra3 || 0;
                 
                 var extra1Class = (extra1 == 1) ? 'present' : 'absent';
                 var extra2Class = (extra2 == 1) ? 'present' : 'absent';
