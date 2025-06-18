@@ -320,6 +320,7 @@ class GitHubAttendanceSystem {
     if (!members[name]) {
       return { 
         total: 0, 
+        regular: 0,
         wednesday: 0, 
         extra: 0,
         extra1: 0,
@@ -328,7 +329,7 @@ class GitHubAttendanceSystem {
         meets_requirement: false 
       };
     }
-
+  
     const member = members[name];
     const role = member.role;
     const attendance = member.attendance;
@@ -358,7 +359,6 @@ class GitHubAttendanceSystem {
     for (let i = 1; i <= 3; i++) {
       if (extraAttendance['extra' + i] === 1) {
         extraCount++;
-        // 기타 참여는 별도 카운트만 하고, 전체 출석에는 포함하지 않음
         if (i === 1) extra1 = 1;
         if (i === 2) extra2 = 1;
         if (i === 3) extra3 = 1;
@@ -366,6 +366,8 @@ class GitHubAttendanceSystem {
     }
     
     // 전체 출석 = 정규 출석 + 기타 참여
+    const totalWithExtra = totalAttendance + extraCount;
+    
     const requirements = ROLE_REQUIREMENTS[role] || { total: 0, wednesday: 0 };
     let meetsRequirement = true;
     
@@ -378,7 +380,7 @@ class GitHubAttendanceSystem {
         meetsRequirement = false;
       }
     }
-        
+    
     return {
       total: totalWithExtra, // 기타 참여 포함한 전체
       regular: totalAttendance, // 정규 출석만
