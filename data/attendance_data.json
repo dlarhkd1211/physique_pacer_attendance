@@ -11,12 +11,7 @@
         "2025-06-18": 0,
         "기타1": 1
       },
-      "order": 0,
-      "extraAttendance": {
-        "extra1": 1,
-        "extra2": 1,
-        "extra3": 1
-      }
+      "order": 0
     },
     "김자영": {
       "role": "운영진",
@@ -40,11 +35,7 @@
         "2025-06-18": 1,
         "기타2": 1
       },
-      "order": 2,
-      "extraAttendance": {
-        "extra1": 1,
-        "extra2": 1
-      }
+      "order": 2
     },
     "서대용": {
       "role": "운영진",
@@ -67,10 +58,7 @@
       "attendance": {
         "2025-06-02": 0
       },
-      "order": 5,
-      "extraAttendance": {
-        "extra1": 1
-      }
+      "order": 5
     },
     "기승현": {
       "role": "포토",
@@ -213,10 +201,7 @@
       "attendance": {
         "2025-06-16": 1
       },
-      "order": 8,
-      "extraAttendance": {
-        "extra1": 1
-      }
+      "order": 8
     }
   },
   "2025-07": {}
