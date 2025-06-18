@@ -2426,13 +2426,13 @@
                 var extra3Class = (extras.extra3 == 1) ? 'present' : 'absent';
                 
                 // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
-                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                html += '<td class="attendance-cell ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
                 html += extras.extra1;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                html += '<td class="attendance-cell ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
                 html += extras.extra2;
                 html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                html += '<td class="attendance-cell ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
                 html += extras.extra3;
                 html += '</td>';
                 
