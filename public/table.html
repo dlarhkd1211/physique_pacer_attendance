@@ -600,9 +600,9 @@
                 var extras = info.extras || {};
                 
                 // 다양한 경로에서 기타 데이터 찾기
-                var extra1 = attendance.extra1 || extras.extra1 || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                var extra1 = attendance.extra1 || extraAttendance.extra1 || 0;
+                var extra2 = attendance.extra2 || extraAttendance.extra2 || 0;
+                var extra3 = attendance.extra3 || extraAttendance.extra3 || 0;
                 
                 var extra1Class = (extra1 == 1) ? 'present' : 'absent';
                 var extra2Class = (extra2 == 1) ? 'present' : 'absent';
