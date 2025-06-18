@@ -2394,11 +2394,10 @@
                 var day = dateObj.getDate();
                 html += '<th style="min-width: 50px;">' + month + '월<br>' + day + '일<br>' + weekday + '</th>';
             }
-            
+            html += '<th style="min-width: 50px;">' + '기타1' + '</th>';
+            html += '<th style="min-width: 50px;">' + '기타2' + '</th>';
+            html += '<th style="min-width: 50px;">' + '기타3' + '</th>';
             // 기타 칼럼 헤더 추가
-            html += '<th class="extra-column-header" style="min-width: 60px;">기타1</th>';
-            html += '<th class="extra-column-header" style="min-width: 60px;">기타2</th>';
-            html += '<th class="extra-column-header" style="min-width: 60px;">기타3</th>';
             
             html += '</tr></thead>';
             
@@ -2430,38 +2429,49 @@
                     html += displayText;
                     html += '</td>';
                 }
+                others = ['기타1','기타2','기타3']
+                for (var Index = 0;Index < 3;Index++) {
+                    var oth = others[Index];
+                    var attendance = info.attendance || {};
+                    var cellClass = status === 1 ? 'present' : 'absent';
+                    var displayText = status === 1 ? '1' : '0';
+
+                    html += '<td class="attendance-cell ' + cellClass + '" onclick="toggleAttendance(\'' + name + '\', \'' + oth + '\', this)" title="' + name + ' - ' + oth + ' 클릭하여 변경">';
+                    html += displayText;
+                    html += '</td>';
+                }
                 
-                // 기타 칼럼 추가 - 모든 가능한 데이터 소스에서 확인
-                var attendance = info.attendance || {};
-                var extras = info.extras || {};
+                // // 기타 칼럼 추가 - 모든 가능한 데이터 소스에서 확인
+                // var attendance = info.attendance || {};
+                // var extras = info.extras || {};
                 
-                // 다양한 경로에서 기타 데이터 찾기
-                var extra1 = attendance.extra1 || extras.extra1 || attendance['extra1'] || extras['extra1'] || 0;
-                var extra2 = attendance.extra2 || extras.extra2 || attendance['extra2'] || extras['extra2'] || 0;
-                var extra3 = attendance.extra3 || extras.extra3 || attendance['extra3'] || extras['extra3'] || 0;
+                // // 다양한 경로에서 기타 데이터 찾기
+                // var extra1 = attendance.extra1 || extras.extra1 || attendance['extra1'] || extras['extra1'] || 0;
+                // var extra2 = attendance.extra2 || extras.extra2 || attendance['extra2'] || extras['extra2'] || 0;
+                // var extra3 = attendance.extra3 || extras.extra3 || attendance['extra3'] || extras['extra3'] || 0;
                 
-                console.log('멤버 ' + name + ' 기타 데이터:', {
-                    extra1: extra1,
-                    extra2: extra2,
-                    extra3: extra3,
-                    attendance: attendance,
-                    extras: extras
-                });
+                // console.log('멤버 ' + name + ' 기타 데이터:', {
+                //     extra1: extra1,
+                //     extra2: extra2,
+                //     extra3: extra3,
+                //     attendance: attendance,
+                //     extras: extras
+                // });
                 
-                var extra1Class = (extra1 == 1) ? 'present' : 'absent';
-                var extra2Class = (extra2 == 1) ? 'present' : 'absent';
-                var extra3Class = (extra3 == 1) ? 'present' : 'absent';
+                // var extra1Class = (extra1 == 1) ? 'present' : 'absent';
+                // var extra2Class = (extra2 == 1) ? 'present' : 'absent';
+                // var extra3Class = (extra3 == 1) ? 'present' : 'absent';
                 
-                // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
-                html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
-                html += extra1;
-                html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
-                html += extra2;
-                html += '</td>';
-                html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
-                html += extra3;
-                html += '</td>';
+                // // 일반 출석과 동일한 형식으로 생성 (toggleAttendance 사용)
+                // html += '<td class="attendance-cell extra-column ' + extra1Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                // html += extra1;
+                // html += '</td>';
+                // html += '<td class="attendance-cell extra-column ' + extra2Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                // html += extra2;
+                // html += '</td>';
+                // html += '<td class="attendance-cell extra-column ' + extra3Class + '" onclick="toggleAttendance(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                // html += extra3;
+                // html += '</td>';
                 
                 html += '</tr>';
             }
