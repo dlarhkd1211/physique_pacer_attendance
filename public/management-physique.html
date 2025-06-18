@@ -1126,11 +1126,18 @@
                     row.push(status === 1 ? '출석' : '불참');
                 }
                 
-                // 기타 칼럼 데이터 추가
+                // 기타 칼럼 데이터 추가 - attendance에서 가져오기 (화면 표시와 동일)
+                var attendance = info.attendance || {};
                 var extras = info.extras || {};
-                row.push(extras.extra1 || 0);
-                row.push(extras.extra2 || 0);
-                row.push(extras.extra3 || 0);
+                
+                // attendance에서 먼저 확인하고, 없으면 extras에서 확인
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
+                
+                row.push(extra1);
+                row.push(extra2);
+                row.push(extra3);
                 
                 result.push(row);
             }
@@ -1159,7 +1166,14 @@
                 
                 var stats = info.stats;
                 var role = info.role || '미정';
+                
+                // 기타 점수도 attendance와 extras 모두에서 확인 (화면 표시와 동일)
+                var attendance = info.attendance || {};
                 var extras = info.extras || {};
+                
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
                 
                 // 달성률 계산
                 var achievementRate = 0;
@@ -1174,9 +1188,9 @@
                     stats.wednesday || 0,
                     stats.meets_requirement ? '충족' : '미충족',
                     role === '운영진' ? 'N/A' : achievementRate + '%',
-                    extras.extra1 || 0,
-                    extras.extra2 || 0,
-                    extras.extra3 || 0
+                    extra1,
+                    extra2,
+                    extra3
                 ]);
             }
             
@@ -1279,7 +1293,14 @@
                 
                 var stats = info.stats;
                 var role = info.role || '미정';
+                
+                // 기타 점수도 attendance와 extras 모두에서 확인 (화면 표시와 동일)
+                var attendance = info.attendance || {};
                 var extras = info.extras || {};
+                
+                var extra1 = attendance.extra1 || extras.extra1 || 0;
+                var extra2 = attendance.extra2 || extras.extra2 || 0;
+                var extra3 = attendance.extra3 || extras.extra3 || 0;
                 
                 report += (i + 1) + '. ' + name + ' (' + role + ')\n';
                 report += '   총 출석: ' + (stats.total || 0) + '회';
@@ -1291,9 +1312,9 @@
                 // 기타 점수 추가
                 if (extras.extra1 || extras.extra2 || extras.extra3) {
                     report += '   기타 점수: ';
-                    report += '기타1(' + (extras.extra1 || 0) + ') ';
-                    report += '기타2(' + (extras.extra2 || 0) + ') ';
-                    report += '기타3(' + (extras.extra3 || 0) + ')';
+                    report += '기타1(' + extra1 + ') ';
+                    report += '기타2(' + extra2 + ') ';
+                    report += '기타3(' + extra3 + ')';
                     report += '\n';
                 }
                 
@@ -2507,36 +2528,38 @@
                         html += '</div>';
                     }
                     
-                    // 기타 항목들 추가 - extras 데이터 확인 및 기본값 처리
-                    var extras = info.extras || {};
+                    // 기타 항목들 추가 - 출석 데이터에서 기타 값 추출
+                    var attendance = info.attendance || {};
+                    var extras = {
+                        extra1: attendance.extra1 || 0,
+                        extra2: attendance.extra2 || 0, 
+                        extra3: attendance.extra3 || 0
+                    };
                     
-                    // 서버에서 기타 데이터가 없는 경우 출석 데이터에서 찾기 시도
-                    if (!extras.extra1 && !extras.extra2 && !extras.extra3) {
-                        var attendance = info.attendance || {};
-                        extras = {
-                            extra1: attendance.extra1 || 0,
-                            extra2: attendance.extra2 || 0, 
-                            extra3: attendance.extra3 || 0
-                        };
+                    // info.extras가 있으면 우선 사용
+                    if (info.extras) {
+                        extras.extra1 = info.extras.extra1 || extras.extra1;
+                        extras.extra2 = info.extras.extra2 || extras.extra2;
+                        extras.extra3 = info.extras.extra3 || extras.extra3;
                     }
                     
-                    var extra1Class = (extras.extra1 === 1) ? 'present' : 'absent';
-                    var extra2Class = (extras.extra2 === 1) ? 'present' : 'absent';
-                    var extra3Class = (extras.extra3 === 1) ? 'present' : 'absent';
+                    var extra1Class = (extras.extra1 == 1) ? 'present' : 'absent';
+                    var extra2Class = (extras.extra2 == 1) ? 'present' : 'absent';
+                    var extra3Class = (extras.extra3 == 1) ? 'present' : 'absent';
                     
-                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경">';
+                    html += '<div class="attendance-item-mobile ' + extra1Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra1\', this)" title="' + name + ' - 기타1 클릭하여 변경" data-value="' + extras.extra1 + '">';
                     html += '<div class="date-label-mobile">기타1</div>';
-                    html += '<div class="attendance-value-mobile">' + (extras.extra1 || 0) + '</div>';
+                    html += '<div class="attendance-value-mobile">' + extras.extra1 + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경">';
+                    html += '<div class="attendance-item-mobile ' + extra2Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra2\', this)" title="' + name + ' - 기타2 클릭하여 변경" data-value="' + extras.extra2 + '">';
                     html += '<div class="date-label-mobile">기타2</div>';
-                    html += '<div class="attendance-value-mobile">' + (extras.extra2 || 0) + '</div>';
+                    html += '<div class="attendance-value-mobile">' + extras.extra2 + '</div>';
                     html += '</div>';
                     
-                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경">';
+                    html += '<div class="attendance-item-mobile ' + extra3Class + '" onclick="toggleExtraValueMobile(\'' + name + '\', \'extra3\', this)" title="' + name + ' - 기타3 클릭하여 변경" data-value="' + extras.extra3 + '">';
                     html += '<div class="date-label-mobile">기타3</div>';
-                    html += '<div class="attendance-value-mobile">' + (extras.extra3 || 0) + '</div>';
+                    html += '<div class="attendance-value-mobile">' + extras.extra3 + '</div>';
                     html += '</div>';
                     
                     html += '</div>';
@@ -2550,25 +2573,28 @@
             return html;
         }
         
-        // 기타 점수 토글 (테이블 뷰용) - 0/1 토글
+        // 기타 점수 토글 (테이블 뷰용) - data-value에서 현재 값 읽기
         function toggleExtraValue(name, extraType, cell) {
-            var currentValue = parseInt(cell.textContent) || 0;
+            var currentValue = parseInt(cell.getAttribute('data-value')) || 0;
             var newValue = currentValue === 1 ? 0 : 1;
             
+            console.log('토글: ' + name + ' ' + extraType + ' ' + currentValue + ' -> ' + newValue);
             updateExtraValue(name, extraType, newValue, cell);
         }
         
-        // 기타 점수 토글 (모바일 카드 뷰용) - 0/1 토글
+        // 기타 점수 토글 (모바일 카드 뷰용) - data-value에서 현재 값 읽기  
         function toggleExtraValueMobile(name, extraType, cell) {
-            var valueElement = cell.querySelector('.attendance-value-mobile');
-            var currentValue = parseInt(valueElement.textContent) || 0;
+            var currentValue = parseInt(cell.getAttribute('data-value')) || 0;
             var newValue = currentValue === 1 ? 0 : 1;
             
-            updateExtraValue(name, extraType, newValue, valueElement);
+            console.log('모바일 토글: ' + name + ' ' + extraType + ' ' + currentValue + ' -> ' + newValue);
+            updateExtraValue(name, extraType, newValue, cell);
         }
         
-        // 기타 점수 업데이트 서버 요청 (출석과 동일한 API 사용)
+        // 기타 점수 업데이트 서버 요청 - 디버깅 로그 추가
         function updateExtraValue(name, extraType, newValue, element) {
+            console.log('서버 요청: ' + name + ' ' + extraType + ' = ' + newValue);
+            
             fetch('/api/attendance', {
                 method: 'POST',
                 headers: {
@@ -2586,26 +2612,53 @@
                 return response.json();
             })
             .then(function(data) {
+                console.log('서버 응답:', data);
                 if (data.success) {
-                    // 현재 선택된 멤버 이름 저장 (카드뷰 상태 유지용)
-                    var currentSelectedMemberName = null;
-                    if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
-                        currentSelectedMemberName = memberList[selectedMemberIndex];
-                    }
+                    // 즉시 UI 업데이트 (서버 응답을 기다리지 않고)
+                    updateExtraUI(element, newValue);
                     
-                    // 전체 테이블 새로고침하여 서버에서 최신 데이터 가져오기
-                    if (currentSelectedMemberName) {
-                        loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
-                    } else {
-                        loadAttendanceTable();
-                    }
+                    // 1초 후 전체 데이터 새로고침
+                    setTimeout(function() {
+                        console.log('전체 테이블 새로고침');
+                        var currentSelectedMemberName = null;
+                        if (memberList.length > 0 && selectedMemberIndex >= 0 && selectedMemberIndex < memberList.length) {
+                            currentSelectedMemberName = memberList[selectedMemberIndex];
+                        }
+                        
+                        if (currentSelectedMemberName) {
+                            loadAttendanceTableWithMemberSelection(currentSelectedMemberName);
+                        } else {
+                            loadAttendanceTable();
+                        }
+                    }, 1000);
                 } else {
-                    alert('기타 점수 업데이트에 실패했습니다.');
+                    alert('기타 점수 업데이트에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
                 }
             })
             .catch(function(error) {
+                console.error('네트워크 오류:', error);
                 alert('네트워크 오류가 발생했습니다: ' + error);
             });
+        }
+        
+        // UI 즉시 업데이트 함수
+        function updateExtraUI(element, newValue) {
+            // data-value 업데이트
+            element.setAttribute('data-value', newValue);
+            
+            // 클래스 업데이트
+            element.classList.remove('present', 'absent');
+            element.classList.add(newValue === 1 ? 'present' : 'absent');
+            
+            // 텍스트 업데이트
+            var valueElement = element.querySelector('.attendance-value-mobile');
+            if (valueElement) {
+                valueElement.textContent = newValue;
+            } else {
+                element.textContent = newValue;
+            }
+            
+            console.log('UI 업데이트 완료: ' + newValue);
         }
         
         // 멤버 네비게이션 함수들
