@@ -106,6 +106,7 @@
             display: flex;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            position: relative;
         }
         
         /* 고정 칼럼 (직책, 성명, 합계) */
@@ -116,11 +117,14 @@
             background: white;
             border-right: 3px solid #667eea;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
         }
         
         .fixed-columns table {
             border-collapse: collapse;
             background: white;
+            table-layout: fixed;
+            width: 240px;
         }
         
         .fixed-columns th {
@@ -132,23 +136,32 @@
             font-size: 12px;
         }
         
+        .fixed-columns th:nth-child(1) { width: 80px; }
+        .fixed-columns th:nth-child(2) { width: 100px; }
+        .fixed-columns th:nth-child(3) { width: 60px; }
+        
         .fixed-columns td {
             padding: 10px 8px;
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
             font-size: 13px;
             background: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         /* 스크롤 가능한 칼럼 영역 */
         .scrollable-columns {
             flex: 1;
             overflow-x: auto;
+            min-width: 0;
         }
         
         .scrollable-columns table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
+            min-width: 100%;
         }
         
         .scrollable-columns th {
@@ -168,31 +181,6 @@
             border-bottom: 1px solid #e0e0e0;
             font-size: 13px;
             min-width: 60px;
-        }
-        
-        /* 기존 단일 테이블 스타일 (호환성을 위해 유지) */
-        .attendance-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            min-width: 800px;
-        }
-        
-        .attendance-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 12px;
-            min-width: 60px;
-        }
-        
-        .attendance-table td {
-            padding: 10px 8px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 13px;
         }
         
         .attendance-cell {
