@@ -93,7 +93,7 @@
         .btn-warning { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; }
         .btn-info { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
         
-        /* 테이블 스타일 */
+        /* 테이블 컨테이너 - 고정 칼럼 지원 */
         .table-container {
             overflow: hidden;
             border-radius: 10px;
@@ -106,7 +106,6 @@
             display: flex;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            position: relative;
         }
         
         /* 고정 칼럼 (직책, 성명, 합계) */
@@ -117,14 +116,11 @@
             background: white;
             border-right: 3px solid #667eea;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            flex-shrink: 0;
         }
         
         .fixed-columns table {
             border-collapse: collapse;
             background: white;
-            table-layout: fixed;
-            width: 240px;
         }
         
         .fixed-columns th {
@@ -136,32 +132,23 @@
             font-size: 12px;
         }
         
-        .fixed-columns th:nth-child(1) { width: 80px; }
-        .fixed-columns th:nth-child(2) { width: 100px; }
-        .fixed-columns th:nth-child(3) { width: 60px; }
-        
         .fixed-columns td {
             padding: 10px 8px;
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
             font-size: 13px;
             background: white;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
         
         /* 스크롤 가능한 칼럼 영역 */
         .scrollable-columns {
             flex: 1;
             overflow-x: auto;
-            min-width: 0;
         }
         
         .scrollable-columns table {
             border-collapse: collapse;
-            width: auto;
-            min-width: 100%;
+            width: 100%;
         }
         
         .scrollable-columns th {
@@ -172,7 +159,6 @@
             font-weight: 600;
             font-size: 12px;
             min-width: 60px;
-            white-space: nowrap;
         }
         
         .scrollable-columns td {
@@ -180,7 +166,6 @@
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
             font-size: 13px;
-            min-width: 60px;
         }
         
         .attendance-cell {
@@ -211,19 +196,6 @@
         
         .pass { background-color: #e8f5e8; color: #2e7d32; }
         .fail { background-color: #ffebee; color: #c62828; }
-        
-        /* 모바일 스크롤 안내 */
-        .mobile-scroll-hint {
-            display: none;
-            text-align: center;
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            padding: 8px;
-            background: #fff3cd;
-            border-radius: 4px;
-            border-left: 4px solid #ffc107;
-        }
         
         /* 멤버 관리 */
         .member-management {
@@ -348,6 +320,19 @@
             margin: 15px 0;
         }
         
+        /* 모바일 스크롤 안내 */
+        .mobile-scroll-hint {
+            display: none;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #fff3cd;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+        }
+        
         /* 반응형 */
         @media (max-width: 768px) {
             body { padding: 10px; }
@@ -390,6 +375,49 @@
                 transform: none;
                 margin-bottom: 10px;
             }
+            
+            .mobile-scroll-hint {
+                display: block;
+            }
+            
+            .fixed-columns th,
+            .fixed-columns td,
+            .scrollable-columns th,
+            .scrollable-columns td {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+            
+            .attendance-cell {
+                min-width: 35px;
+                min-height: 35px;
+                padding: 6px;
+                font-size: 12px;
+                margin: 1px;
+            }
+        }
+        
+        /* 가로 스크롤 스타일링 */
+        .table-wrapper::-webkit-scrollbar,
+        .scrollable-columns::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-track,
+        .scrollable-columns::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb,
+        .scrollable-columns::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb:hover,
+        .scrollable-columns::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
         }
     </style>
 </head>
@@ -753,7 +781,7 @@
         }
         
         // =============================================================================
-        // 출석 관리
+        // 출석 관리 (고정 컬럼 버전)
         // =============================================================================
         function loadAttendanceTable() {
             var container = document.getElementById('attendanceTable');
@@ -788,24 +816,23 @@
                 finalDates = Object.keys(data[memberEntries[0]].attendance || {}).sort();
             }
             
-            var html = '<div class="table-container"><table class="attendance-table">';
+            var html = '';
             
-            // 헤더
+            // 모바일 스크롤 안내
+            html += '<div class="mobile-scroll-hint">📱 좌우로 스크롤하여 모든 날짜를 확인하세요</div>';
+            
+            html += '<div class="table-container">';
+            html += '<div class="table-wrapper">';
+            
+            // 고정 칼럼 (직책, 성명, 합계만)
+            html += '<div class="fixed-columns">';
+            html += '<table>';
             html += '<thead><tr>';
-            html += '<th>직책</th><th>성명</th><th>합계</th>';
-            
-            finalDates.forEach(date => {
-                var dateObj = new Date(date);
-                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-                var weekday = weekdays[dateObj.getDay()];
-                var day = dateObj.getDate();
-                html += `<th>${currentMonth}월<br>${day}일<br>${weekday}</th>`;
-            });
-            
-            html += '<th>기타1</th><th>기타2</th><th>기타3</th>';
+            html += '<th>직책</th>';
+            html += '<th>성명</th>';
+            html += '<th>합계</th>';
             html += '</tr></thead>';
             
-            // 바디
             html += '<tbody>';
             memberEntries.forEach(name => {
                 var info = data[name];
@@ -818,6 +845,37 @@
                 html += `<td><strong>${info.role || '미정'}</strong></td>`;
                 html += `<td><strong>${name}</strong></td>`;
                 html += `<td><strong>${stats.total || 0}</strong></td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            html += '</div>';
+            
+            // 스크롤 가능한 칼럼 (날짜별 출석 + 기타 칼럼)
+            html += '<div class="scrollable-columns">';
+            html += '<table>';
+            html += '<thead><tr>';
+            
+            // 정규 날짜들
+            finalDates.forEach(date => {
+                var dateObj = new Date(date);
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var weekday = weekdays[dateObj.getDay()];
+                var day = dateObj.getDate();
+                html += `<th>${currentMonth}월<br>${day}일<br>${weekday}</th>`;
+            });
+            
+            html += '<th>기타1</th><th>기타2</th><th>기타3</th>';
+            html += '</tr></thead>';
+            
+            html += '<tbody>';
+            memberEntries.forEach(name => {
+                var info = data[name];
+                if (!info || !info.stats) return;
+                
+                var stats = info.stats;
+                var rowClass = stats.meets_requirement ? 'pass' : 'fail';
+                
+                html += `<tr class="${rowClass}">`;
                 
                 // 정규 날짜별 출석
                 finalDates.forEach(date => {
@@ -848,7 +906,11 @@
                 
                 html += '</tr>';
             });
-            html += '</tbody></table></div>';
+            html += '</tbody></table>';
+            html += '</div>';
+            
+            html += '</div>'; // table-wrapper
+            html += '</div>'; // table-container
             
             // 범례 추가
             html += `
@@ -866,6 +928,7 @@
                         <p style="margin: 3px 0; color: #1565c0;">• 출석 셀을 클릭하면 출석/불참이 토글됩니다</p>
                         <p style="margin: 3px 0; color: #1565c0;">• 초록색 배경: 출석 조건 충족 ✅</p>
                         <p style="margin: 3px 0; color: #1565c0;">• 빨간색 배경: 출석 조건 미충족 ❌</p>
+                        <p style="margin: 3px 0; color: #1565c0;">• 📱 모바일: 직책/성명/합계 칼럼은 고정, 날짜와 기타 칼럼은 스크롤하여 확인</p>
                     </div>
                 </div>
             `;
@@ -1002,13 +1065,11 @@
                     row.push(status === 1 ? '출석' : '불참');
                 });
                 
-                // attendance에서만 가져오기 (기존 데이터 호환성을 위해 extraAttendance fallback)
                 var attendance = info.attendance || {};
-                var extraAttendance = info.extraAttendance || {};
                 
-                var extra1 = attendance.extra1 || extraAttendance.extra1 || 0;
-                var extra2 = attendance.extra2 || extraAttendance.extra2 || 0;
-                var extra3 = attendance.extra3 || extraAttendance.extra3 || 0;
+                var extra1 = attendance.extra1 || 0;
+                var extra2 = attendance.extra2 || 0;
+                var extra3 = attendance.extra3 || 0;
                 
                 row.push(extra1, extra2, extra3);
                 result.push(row);
